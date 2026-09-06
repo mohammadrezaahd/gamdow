@@ -8,6 +8,7 @@ import {
   Tabs,
   TextField,
 } from "@/components/ui";
+import { TaxonomyManager } from "../components/taxonomy-manager";
 import { useState } from "react";
 import { Box, Card, CardActionArea, Stack, Typography } from "@mui/material";
 import { ArrowBackRounded } from "@mui/icons-material";
@@ -25,12 +26,14 @@ import type { GameCollection } from "@/types/game";
 export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
   const { data, saveGame, saveCollection, deleteCollection } = useLibrary();
   const [tab, setTab] = useState(0);
+  const [managing, setManaging] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [form, setForm] = useState<GameCollection | "new" | null>(null);
   const [remove, setRemove] = useState(false);
   const [status, setStatus] = useState("All");
   const [sort, setSort] = useState("default");
-  const collection = data.collections.find((c) => c.id === selected);
+  const collection =
+    tab === 0 ? data.collections.find((c) => c.id === selected) : undefined;
   const groups =
     tab === 0
       ? data.collections.map((c) => ({
@@ -39,22 +42,21 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
           description: c.description,
           ids: c.gameIds,
         }))
-      : Array.from(
-          new Set(
-            tab === 1
-              ? data.games.flatMap((g) => g.genres)
-              : data.games.map((g) => g.series).filter((s): s is string => !!s),
-          ),
-        ).map((s) => ({
-          id: s,
-          name: s,
+      : (tab === 1 ? data.genres : data.series).map((entry) => ({
+          id: entry.id,
+          name: entry.name,
           description:
-            tab === 1
+            entry.description ||
+            (tab === 1
               ? "Explore this genre"
-              : "Your journey through the series",
+              : "Your journey through the series"),
           ids: data.games
-            .filter((g) => (tab === 1 ? g.genres.includes(s) : g.series === s))
-            .map((g) => g.id),
+            .filter((game) =>
+              tab === 1
+                ? game.genreIds?.includes(entry.id)
+                : game.seriesId === entry.id,
+            )
+            .map((game) => game.id),
         }));
   const group = groups.find((g) => g.id === selected);
   const games = (group?.ids ?? [])
@@ -95,9 +97,19 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
               </Button>
             </Stack>
           ) : (
-            <Button variant="contained" onClick={() => setForm("new")}>
-              Create collection
-            </Button>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
+              <Button variant="outlined" onClick={() => setManaging(true)}>
+                Manage categories
+              </Button>
+              <Button variant="contained" onClick={() => setForm("new")}>
+                Create collection
+              </Button>
+            </Stack>
           )
         }
       />
@@ -290,6 +302,12 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
         <EmptyState
           title="Your shelves are waiting"
           description="Create a collection or add genres and series to your games."
+        />
+      )}
+      {managing && (
+        <TaxonomyManager
+          initialKind={tab === 2 ? "series" : "genre"}
+          onClose={() => setManaging(false)}
         />
       )}
       {form && (

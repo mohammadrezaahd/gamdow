@@ -1,3 +1,4 @@
+import { normalizeTaxonomies, taxonomyKey } from "@/lib/taxonomy";
 import { readSnapshot, writeSnapshot } from "./browser-store";
 import {
   fakeCollections,
@@ -20,13 +21,13 @@ export const plans = [
   "Someday",
   "Not interested",
 ] as const;
-export const initialLibrary: LibrarySnapshot = {
+export const initialLibrary: LibrarySnapshot = normalizeTaxonomies({
   version: 1,
   games: fakeGames,
   collections: fakeCollections,
   gallery: fakeGalleryItems,
   preferences: fakePreferences,
-};
+});
 const key = "gamdow.library.v1";
 const record = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -147,7 +148,31 @@ export function parseLibrary(value: unknown): LibrarySnapshot {
     typeof p.hideSpoilers !== "boolean"
   )
     throw new Error("Invalid preferences in backup.");
-  return value as unknown as LibrarySnapshot;
+  for (const [field, kind] of [
+    ["genres", "genre"],
+    ["series", "series"],
+  ] as const) {
+    const entries = value[field];
+    if (entries === undefined) continue; // Older v1 backups did not have registries.
+    if (!Array.isArray(entries) || !unique(entries))
+      throw new Error("Invalid category registry.");
+    const names = new Set<string>();
+    for (const entry of entries) {
+      if (
+        !record(entry) ||
+        entry.kind !== kind ||
+        typeof entry.name !== "string" ||
+        !entry.name.trim() ||
+        typeof entry.description !== "string" ||
+        typeof entry.createdAt !== "string" ||
+        typeof entry.updatedAt !== "string" ||
+        names.has(taxonomyKey(entry.name))
+      )
+        throw new Error("Invalid or duplicate category in backup.");
+      names.add(taxonomyKey(entry.name));
+    }
+  }
+  return normalizeTaxonomies(value as unknown as LibrarySnapshot);
 }
 // Replace this adapter with an HTTP repository when the API is available.
 export const libraryRepository: LibraryRepository = {

@@ -60,3 +60,13 @@ The root layout includes both `AppRouterCacheProvider` (Next 16 entry point) and
 DM Sans and Space Grotesk are bundled locally with their SIL Open Font Licenses in `public/fonts/`.
 
 No test/spec files or test dependencies are included in the repository.
+
+## In-progress carousel and category management
+
+Overview displays the games with `Playing` status in a stacked-image carousel. Navigation supports buttons, direct indicators, keyboard arrows and horizontal touch swipes. It does not auto-advance. One game hides unnecessary controls; no active games shows a prompt to open the library.
+
+Manage genres and series from **Collections → Manage categories** or **Settings → Manage genres & series**. Create categories before assigning games, edit their descriptions, rename them or remove them. Renames preserve category IDs and update linked game display names; deleting a category removes its assignments without deleting games. Names are unique within each kind, ignoring case and surrounding whitespace.
+
+`types/taxonomy.ts` defines `Genre`, `GameSeries`, `TaxonomyInput`, `TaxonomyMutation` and the future resource-level `TaxonomyRepository` contract. `LibrarySnapshot` contains independent genre and series registries. `Game.genreIds` / `Game.seriesId` are populated links; `genres` / `series` retain display names for compatibility with the existing UI. The current mock adapter normalizes name-based input into registry IDs on save; a future resource API can accept IDs directly.
+
+Old v1 backups and stored archives are migrated by `normalizeTaxonomies` in `lib/taxonomy.ts`. Existing names become registry records, and empty categories remain saved. New categories are immediately available in game form autocomplete suggestions.

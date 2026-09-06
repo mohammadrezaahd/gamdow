@@ -10,6 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 import { ConfirmDialog, SectionTitle } from "@/components/page-parts";
+import { TaxonomyManager } from "../components/taxonomy-manager";
 import { useLibrary } from "../library-context";
 import { parseLibrary } from "@/services/library-repository";
 import type { LibrarySnapshot } from "@/types/game";
@@ -18,6 +19,7 @@ export function SettingsPage() {
   const [draft, setDraft] = useState(data.preferences);
   const [restore, setRestore] = useState<LibrarySnapshot | null>(null);
   const [error, setError] = useState("");
+  const [managing, setManaging] = useState(false);
   const download = () => {
     const url = URL.createObjectURL(
       new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }),
@@ -30,7 +32,16 @@ export function SettingsPage() {
   };
   return (
     <>
-      <SectionTitle title="Settings" eyebrow="MAKE YOURSELF AT HOME" />
+      <SectionTitle
+        title="Settings"
+        eyebrow="MAKE YOURSELF AT HOME"
+        action={
+          <Button variant="outlined" onClick={() => setManaging(true)}>
+            Manage genres & series
+          </Button>
+        }
+      />
+      {managing && <TaxonomyManager onClose={() => setManaging(false)} />}
       <Box
         sx={{
           display: "grid",

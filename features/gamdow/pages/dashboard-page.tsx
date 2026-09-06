@@ -1,11 +1,12 @@
 "use client";
 import { Box, Stack, Typography } from "@mui/material";
-import { NorthEastRounded, PlayArrowRounded } from "@mui/icons-material";
-import { Button, Chip } from "@/components/ui";
+import { NorthEastRounded } from "@mui/icons-material";
+import { Button } from "@/components/ui";
 import { EmptyState, SectionTitle } from "@/components/page-parts";
 import { GameGrid } from "@/components/game-grid";
 import { GameImage } from "@/components/game-image";
 import { archiveTokens as t } from "@/theme/gamdow-theme";
+import { InProgressCarousel } from "../components/in-progress-carousel";
 import { useLibrary } from "../library-context";
 export function DashboardPage({
   onGame,
@@ -23,7 +24,7 @@ export function DashboardPage({
   const recent = [...games].sort((a, b) =>
     b.updatedAt.localeCompare(a.updatedAt),
   );
-  const hero = recent.find((g) => g.status === "Playing") ?? recent[0];
+  const playing = recent.filter((g) => g.status === "Playing");
   const planned = games
     .filter((g) => g.plan === "Up next")
     .sort((a, b) => (a.planOrder ?? 0) - (b.planOrder ?? 0));
@@ -72,7 +73,7 @@ export function DashboardPage({
           Keep them all here.
         </Typography>
       </Stack>
-      {hero ? (
+      {games.length ? (
         <Box
           sx={{
             display: "grid",
@@ -81,104 +82,11 @@ export function DashboardPage({
             mb: 4,
           }}
         >
-          <Box
-            sx={{
-              position: "relative",
-              minHeight: { xs: 390, sm: 410 },
-              overflow: "hidden",
-              borderRadius: 2,
-              border: 1,
-              borderColor: "divider",
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              p: { xs: 2.5, md: 3.5 },
-            }}
-          >
-            <GameImage
-              src={hero.heroImage || hero.coverImage}
-              sx={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center 35%",
-              }}
-            />
-            <Box
-              sx={{
-                position: "absolute",
-                inset: 0,
-                background:
-                  "linear-gradient(0deg,#0b100bf5 2%,#0b100b80 45%,#0b100b30)",
-              }}
-            />
-            <Stack
-              direction="row"
-              sx={{
-                position: "relative",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Chip
-                label={
-                  hero.status === "Playing"
-                    ? "● IN PROGRESS"
-                    : "FROM THE ARCHIVE"
-                }
-                sx={{
-                  bgcolor: "#111311b3",
-                  backdropFilter: "blur(14px)",
-                  color: "primary.main",
-                  borderColor: "#d3fc7233",
-                  px: 1,
-                }}
-              />
-              <Typography variant="overline" sx={{ color: "#fff9" }}>
-                FEATURED / 01
-              </Typography>
-            </Stack>
-            <Box sx={{ position: "relative" }}>
-              <Typography
-                variant="overline"
-                sx={{ color: "#d8dec5", mb: 1, display: "block" }}
-              >
-                {hero.platform} · {hero.genres[0]}{" "}
-                {hero.hoursPlayed !== undefined
-                  ? `· ${hero.hoursPlayed} HOURS`
-                  : ""}
-              </Typography>
-              <Typography
-                variant="h3"
-                sx={{
-                  maxWidth: 500,
-                  fontSize: { xs: 37, md: 52 },
-                  color: "#fff",
-                }}
-              >
-                {hero.title}
-              </Typography>
-              <Stack
-                direction="row"
-                spacing={2}
-                useFlexGap
-                sx={{ mt: 3, alignItems: "center", flexWrap: "wrap" }}
-              >
-                <Button
-                  variant="contained"
-                  endIcon={<NorthEastRounded />}
-                  onClick={() => onGame(hero.id)}
-                >
-                  Continue the story
-                </Button>
-                <Typography variant="caption" sx={{ color: "#fff9" }}>
-                  YOUR JOURNEY, AT YOUR PACE.
-                </Typography>
-              </Stack>
-            </Box>
-          </Box>
+          <InProgressCarousel
+            games={playing}
+            onGame={onGame}
+            onLibrary={onLibrary}
+          />
           <Box
             sx={{
               display: "flex",

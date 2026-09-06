@@ -1,3 +1,4 @@
+import type { Genre, GameSeries } from "./taxonomy";
 export type GameStatus =
   "Not started" | "Playing" | "On hold" | "Completed" | "Dropped";
 export type PlayPlan =
@@ -19,7 +20,9 @@ export interface Game {
   title: string;
   releaseYear?: number;
   genres: string[];
+  genreIds?: string[];
   series?: string;
+  seriesId?: string;
   platform: string;
   status: GameStatus;
   plan: PlayPlan;
@@ -68,6 +71,8 @@ export interface LibrarySnapshot {
   version: 1;
   games: Game[];
   collections: GameCollection[];
+  genres: Genre[];
+  series: GameSeries[];
   gallery: GalleryItem[];
   preferences: UserPreferences;
 }

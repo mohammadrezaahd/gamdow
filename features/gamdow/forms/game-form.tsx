@@ -139,9 +139,7 @@ export function GameForm({
               <Autocomplete
                 multiple
                 freeSolo
-                options={Array.from(
-                  new Set(data.games.flatMap((g) => g.genres)),
-                )}
+                options={data.genres.map((genre) => genre.name)}
                 value={draft.genres}
                 onChange={(_, value) => field("genres", value)}
                 renderInput={(p) => (
@@ -154,13 +152,7 @@ export function GameForm({
               />
               <Autocomplete
                 freeSolo
-                options={Array.from(
-                  new Set(
-                    data.games
-                      .map((g) => g.series)
-                      .filter((s): s is string => !!s),
-                  ),
-                )}
+                options={data.series.map((series) => series.name)}
                 inputValue={draft.series ?? ""}
                 onInputChange={(_, v) => field("series", v)}
                 renderInput={(p) => <TextField {...p} label="Series" />}

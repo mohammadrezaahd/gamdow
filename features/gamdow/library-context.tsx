@@ -19,6 +19,12 @@ import type {
   LibrarySnapshot,
   UserPreferences,
 } from "@/types/game";
+import {
+  normalizeTaxonomies,
+  saveTaxonomy,
+  deleteTaxonomy,
+} from "@/lib/taxonomy";
+import type { TaxonomyMutation, TaxonomyKind } from "@/types/taxonomy";
 export const newId = () => crypto.randomUUID();
 export const today = () => {
   const d = new Date();
@@ -26,6 +32,8 @@ export const today = () => {
 };
 interface LibraryContextValue {
   data: LibrarySnapshot;
+  saveCategory: (mutation: TaxonomyMutation) => void;
+  deleteCategory: (kind: TaxonomyKind, id: string) => void;
   ready: boolean;
   notify: (message: string) => void;
   reorderGames: (games: Game[]) => void;
@@ -85,18 +93,28 @@ export function LibraryProvider({ children }: PropsWithChildren) {
     data,
     ready,
     notify,
+    saveCategory: (mutation) => {
+      setData(saveTaxonomy(data, mutation, newId(), new Date().toISOString()));
+      notify("Category saved");
+    },
+    deleteCategory: (kind, id) => {
+      setData((current) => deleteTaxonomy(current, kind, id));
+      notify("Category removed");
+    },
     reorderGames: (games) => {
       setData((d) => ({ ...d, games }));
       notify("Plan order updated");
     },
     saveGame: (game) => {
-      setData((d) => ({
-        ...d,
-        games: upsert(d.games, {
-          ...game,
-          updatedAt: new Date().toISOString(),
+      setData((d) =>
+        normalizeTaxonomies({
+          ...d,
+          games: upsert(d.games, {
+            ...game,
+            updatedAt: new Date().toISOString(),
+          }),
         }),
-      }));
+      );
       notify("Game saved");
     },
     deleteGame: (id) => {
