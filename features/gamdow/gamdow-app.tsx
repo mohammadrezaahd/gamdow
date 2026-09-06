@@ -10,7 +10,8 @@ import StarRounded from "@mui/icons-material/StarRounded";
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, LinearProgress, MenuItem, Paper, Select, Stack, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
 import { AppShell, type AppPage } from "@/components/app-shell";
-import { GameCard } from "@/components/game-card";
+import { GameGrid } from "@/components/game-grid";
+import { GameDetail } from "./game-detail";
 import { fakeCollections, fakeGalleryItems, fakeGames, fakePreferences } from "@/data/fake-data";
 import type { Game, GameStatus } from "@/types/game";
 
@@ -56,7 +57,7 @@ export function GamdowApp() {
     setPage("library");
   };
 
-  const shell = (children: React.ReactNode) => <AppShell page={page} onPageChange={(next) => { setSelectedGame(null); setPage(next); }}>{children}</AppShell>;
+  const shell = (children: React.ReactNode) => <><AppShell page={page} onPageChange={(next) => { setSelectedGame(null); setPage(next); }}>{children}</AppShell><Dialog open={addOpen} onClose={() => setAddOpen(false)} fullWidth maxWidth="xs"><DialogTitle>Add a game</DialogTitle><DialogContent><TextField autoFocus fullWidth label="Game title" value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} sx={{ mt: 1 }} onKeyDown={(event) => { if (event.key === "Enter") createGame(); }} /></DialogContent><DialogActions><Button onClick={() => setAddOpen(false)}>Cancel</Button><Button variant="contained" onClick={createGame}>Add to library</Button></DialogActions></Dialog></>;
 
   if (selectedGame) {
     return shell(<GameDetail game={selectedGame} onBack={() => setSelectedGame(null)} onFavorite={toggleFavorite} />);
@@ -113,5 +114,4 @@ export function GamdowApp() {
     <Paper variant="outlined" sx={{ p: 3, maxWidth: 640 }}><Typography variant="h5">Library preferences</Typography><Divider sx={{ my: 2.5 }} /><FormControlLabel control={<Switch defaultChecked />} label="Hide spoiler-marked screenshots" /><FormControlLabel control={<Switch defaultChecked />} label="Use compact game cards" /><Alert severity="info" sx={{ mt: 2 }}>This is fake local data for now. The interfaces are ready to connect to APIs later.</Alert></Paper>
   </>);
   
-  // The dialog is rendered below using a portal in the component return path.
 }
