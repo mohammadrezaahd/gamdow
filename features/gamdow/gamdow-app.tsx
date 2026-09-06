@@ -9,6 +9,7 @@ import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, FormControlLabel, LinearProgress, MenuItem, Paper, Select, Stack, Switch, Tab, Tabs, TextField, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { AppShell, type AppPage } from "@/components/app-shell";
 import { GameGrid } from "@/components/game-grid";
 import { GameDetail } from "./game-detail";
