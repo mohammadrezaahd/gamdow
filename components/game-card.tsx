@@ -17,8 +17,8 @@ export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
     <Card sx={{ overflow: "hidden", position: "relative", minHeight: 286 }}>
       <CardActionArea onClick={() => onSelect(game)} sx={{ height: "100%", alignItems: "stretch" }}>
         <Box sx={{ height: 212, position: "relative", overflow: "hidden", bgcolor: "background.paper" }}>
-          <Box component="img" src={game.coverUrl} alt={game.title} sx={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .25s", ".MuiCardActionArea-root:hover &": { transform: "scale(1.04)" } }} />
-          <Chip label={game.status.replace("-", " ")} size="small" sx={{ position: "absolute", top: 10, left: 10, bgcolor: "rgba(12,16,29,.82)", textTransform: "capitalize" }} />
+          <Box component="img" src={game.coverImage} alt={game.title} sx={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform .25s", ".MuiCardActionArea-root:hover &": { transform: "scale(1.04)" } }} />
+          <Chip label={game.status} size="small" sx={{ position: "absolute", top: 10, left: 10, bgcolor: "rgba(12,16,29,.82)" }} />
         </Box>
         <Stack spacing={0.5} sx={{ p: 1.5, alignItems: "flex-start" }}>
           <Typography fontWeight={800} noWrap width="100%">{game.title}</Typography>
@@ -26,7 +26,7 @@ export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
           <Stack direction="row" spacing={0.5} alignItems="center">
             <StarRounded color="warning" fontSize="small" />
             <Typography variant="body2" fontWeight={800}>{game.rating ? game.rating.toFixed(1) : "Unrated"}</Typography>
-            <Typography variant="caption" color="text.secondary">· {game.platforms[0]}</Typography>
+            <Typography variant="caption" color="text.secondary">· {game.platform}</Typography>
           </Stack>
         </Stack>
       </CardActionArea>
