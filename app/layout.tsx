@@ -1,18 +1,11 @@
-import type { Metadata } from "next";
-import type { PropsWithChildren } from "react";
-import { Providers } from "./providers";
-import "./globals.css";
+import type { ReactNode } from "react";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 
-export const metadata: Metadata = {
-  title: "gamdow — Your game collection",
-  description: "A personal gaming library, planner and journal.",
-};
-
-export default function RootLayout({ children }: PropsWithChildren) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <AppRouterCacheProvider>{children}</AppRouterCacheProvider>
       </body>
     </html>
   );
