@@ -10,11 +10,11 @@ import SearchRounded from "@mui/icons-material/SearchRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import ViewTimelineRounded from "@mui/icons-material/ViewTimelineRounded";
 import { AppBar, Box, BottomNavigation, BottomNavigationAction, IconButton, InputBase, List, ListItemButton, ListItemIcon, ListItemText, Paper, Stack, Toolbar, Typography } from "@mui/material";
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, ReactNode } from "react";
 
 export type AppPage = "dashboard" | "library" | "planner" | "collections" | "reviews" | "gallery" | "statistics" | "settings";
 
-const navigation: { page: AppPage; label: string; icon: React.ReactNode }[] = [
+const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
   { page: "dashboard", label: "Dashboard", icon: <DashboardRounded /> },
   { page: "library", label: "Library", icon: <GridViewRounded /> },
   { page: "planner", label: "Planner", icon: <ViewTimelineRounded /> },
