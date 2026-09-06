@@ -1,7 +1,6 @@
+import { Button, Dialog } from "@/components/ui";
 import {
   Box,
-  Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,

@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui";
 import {
   createContext,
   useContext,
@@ -6,7 +7,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { Alert, Button, Snackbar } from "@mui/material";
+import { Alert, Snackbar } from "@mui/material";
 import {
   initialLibrary,
   libraryRepository,
@@ -76,7 +77,7 @@ export function LibraryProvider({ children }: PropsWithChildren) {
       .save(data)
       .catch(() =>
         setError(
-          "Browser storage is full or unavailable. Changes are temporary; export a backup in Settings.",
+          "The archive could not be saved on this device. Check available storage and export a backup in Settings.",
         ),
       );
   }, [data, ready, storageEnabled]);

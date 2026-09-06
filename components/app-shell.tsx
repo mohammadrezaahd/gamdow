@@ -6,21 +6,16 @@ import {
   Box,
   BottomNavigation,
   BottomNavigationAction,
-  Button,
-  Dialog,
   DialogContent,
   DialogTitle,
-  IconButton,
-  InputBase,
   List,
   ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Paper,
   Stack,
   Toolbar,
   Typography,
 } from "@mui/material";
+import { Button, Dialog, IconButton, InputBase } from "@/components/ui";
 import {
   AddRounded,
   AutoAwesomeRounded,
@@ -34,8 +29,9 @@ import {
   SettingsRounded,
   ViewTimelineRounded,
   CloseRounded,
+  NorthEastRounded,
 } from "@mui/icons-material";
-import { glass } from "@/theme/gamdow-theme";
+import { archiveTokens as t, glass } from "@/theme/gamdow-theme";
 export type AppPage =
   | "dashboard"
   | "library"
@@ -46,12 +42,12 @@ export type AppPage =
   | "statistics"
   | "settings";
 export const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
-  { page: "dashboard", label: "Home", icon: <DashboardRounded /> },
+  { page: "dashboard", label: "Overview", icon: <DashboardRounded /> },
   { page: "library", label: "Library", icon: <GridViewRounded /> },
-  { page: "planner", label: "Planner", icon: <ViewTimelineRounded /> },
+  { page: "planner", label: "Up next", icon: <ViewTimelineRounded /> },
   {
     page: "collections",
-    label: "Browse",
+    label: "Collections",
     icon: <CollectionsBookmarkRounded />,
   },
   { page: "reviews", label: "Reviews", icon: <MenuBookRounded /> },
@@ -85,109 +81,136 @@ export function AppShell({
     <Box
       sx={{
         minHeight: "100dvh",
-        p: { xs: 1.25, md: 2 },
-        pb: { xs: "calc(106px + env(safe-area-inset-bottom))", md: 2 },
+        px: { xs: 2, md: 3 },
+        pb: { xs: "calc(110px + env(safe-area-inset-bottom))", md: 3 },
       }}
     >
       <AppBar
-        position="sticky"
         elevation={0}
+        position="sticky"
         sx={{
-          ...glass,
-          top: { xs: 10, md: 16 },
-          borderRadius: 4,
-          zIndex: 1100,
+          top: 0,
+          background: "#111311ee",
+          backdropFilter: "blur(24px)",
+          border: 0,
+          borderBottom: 1,
+          borderColor: "divider",
+          borderRadius: 0,
         }}
       >
-        <Toolbar sx={{ gap: { xs: 1, md: 3 }, px: { xs: 1.5, md: 2.5 } }}>
+        <Toolbar
+          disableGutters
+          sx={{ minHeight: { xs: 76, md: 92 }, gap: { xs: 2, lg: 4 } }}
+        >
           <Button
+            aria-label="gamdow home"
             onClick={() => go("dashboard")}
             sx={{
-              minWidth: { md: 186 },
-              justifyContent: "flex-start",
-              color: "text.primary",
               p: 0,
+              minWidth: { xs: 115, md: 205 },
+              color: "text.primary",
+              justifyContent: "flex-start",
+              gap: 1.5,
             }}
-            aria-label="gamdow home"
           >
             <Box
               sx={{
-                width: 34,
-                height: 34,
-                mr: 1,
-                borderRadius: 2.5,
-                display: "grid",
-                placeItems: "center",
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
-                fontSize: 25,
-                fontWeight: 900,
+                width: 31,
+                height: 35,
+                position: "relative",
+                color: "primary.main",
+                fontFamily: t.display,
+                fontSize: 41,
+                fontWeight: 700,
+                lineHeight: 0.65,
+                transform: "rotate(-12deg)",
               }}
             >
               g
+              <Box
+                sx={{
+                  width: 7,
+                  height: 7,
+                  bgcolor: "primary.main",
+                  position: "absolute",
+                  bottom: -2,
+                  right: -4,
+                }}
+              />
             </Box>
             <Typography
               sx={{
-                display: { xs: "none", sm: "block" },
-                fontWeight: 850,
-                fontSize: 23,
-                letterSpacing: "-.06em",
+                fontFamily: t.display,
+                fontWeight: 700,
+                letterSpacing: "-.075em",
+                fontSize: 26,
               }}
             >
               gamdow
             </Typography>
           </Button>
+          <Typography
+            variant="overline"
+            color="text.secondary"
+            sx={{ display: { xs: "none", lg: "block" }, whiteSpace: "nowrap" }}
+          >
+            AN INDEPENDENT
+            <br />
+            PLAY ARCHIVE / VOL. 01
+          </Typography>
           <Box
             sx={{
+              ml: { md: "auto" },
+              width: { xs: "100%", md: 280 },
               display: "flex",
+              gap: 1,
               alignItems: "center",
-              px: 1.4,
-              py: 0.3,
-              width: { xs: "100%", md: "min(520px, 50%)" },
-              border: 1,
+              borderBottom: 1,
               borderColor: "divider",
-              bgcolor: "rgba(0,0,0,.12)",
-              borderRadius: 3,
+              py: 0.7,
             }}
           >
-            <SearchRounded fontSize="small" color="action" />
+            <SearchRounded sx={{ fontSize: 19, color: "text.secondary" }} />
             <InputBase
               inputProps={{ "aria-label": "Search all games" }}
+              placeholder="Find a game…"
               value={search}
               onChange={(e) => onSearch(e.target.value)}
-              placeholder="Find your next story…"
-              sx={{ ml: 1, flex: 1, minWidth: 0, fontSize: 14 }}
+              sx={{ minWidth: 0, width: "100%", fontSize: 12 }}
             />
             {search && (
               <IconButton
-                size="small"
                 aria-label="Clear search"
+                size="small"
                 onClick={() => onSearch("")}
               >
                 <CloseRounded fontSize="small" />
               </IconButton>
             )}
           </Box>
-          <Box sx={{ flex: 1, display: { xs: "none", md: "block" } }} />
           <Button
             variant="contained"
-            startIcon={<AddRounded />}
             onClick={onAdd}
+            endIcon={<AddRounded />}
             sx={{ display: { xs: "none", md: "flex" }, whiteSpace: "nowrap" }}
           >
-            Add game
+            New entry
           </Button>
           <IconButton
             aria-label="Profile settings"
             onClick={() => go("settings")}
+            sx={{ display: { xs: "none", sm: "flex" } }}
           >
             <Avatar
               sx={{
-                width: 33,
-                height: 33,
-                fontSize: 13,
-                bgcolor: "rgba(166,219,212,.15)",
-                color: "secondary.main",
+                width: 35,
+                height: 35,
+                fontFamily: t.mono,
+                fontSize: 11,
+                background: "#d3fc7210",
+                color: t.acid,
+                border: 1,
+                borderColor: "divider",
               }}
             >
               {name.slice(0, 2).toUpperCase()}
@@ -198,71 +221,97 @@ export function AppShell({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { md: "210px minmax(0,1fr)" },
-          gap: { md: 3, xl: 4 },
-          width: "100%",
-          mt: { xs: 3, md: 3 },
+          gridTemplateColumns: { md: "184px minmax(0,1fr)" },
+          gap: { md: 4, xl: 6 },
+          mt: { xs: 3, md: 4 },
         }}
       >
-        <Paper
+        <Box
           component="aside"
           sx={{
             display: { xs: "none", md: "flex" },
             flexDirection: "column",
             position: "sticky",
-            top: 104,
-            height: "calc(100dvh - 125px)",
-            p: 1.25,
-            borderRadius: 4,
+            top: 120,
+            height: "calc(100dvh - 146px)",
+            minHeight: 450,
           }}
         >
           <Typography
             variant="overline"
-            color="text.secondary"
-            sx={{ px: 1.5, py: 1 }}
+            sx={{ mb: 2, color: "text.secondary" }}
           >
-            YOUR PLAY SPACE
+            INDEX /
           </Typography>
           <List disablePadding>
-            {navigation.map((item) => (
+            {navigation.map((item, i) => (
               <ListItemButton
                 key={item.page}
                 selected={page === item.page}
                 onClick={() => go(item.page)}
                 sx={{
-                  borderRadius: 2.5,
+                  px: 1.5,
+                  py: 1.4,
                   mb: 0.75,
+                  border: "1px solid transparent",
+                  borderRadius: 1,
+                  gap: 1.5,
+                  color: "text.secondary",
                   "&.Mui-selected": {
-                    bgcolor: "rgba(212,247,125,.12)",
+                    background: "#d3fc720c",
+                    borderColor: "#d3fc722a",
                     color: "primary.main",
                   },
+                  "&:hover": { color: "text.primary" },
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 35, color: "inherit" }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  slotProps={{
-                    primary: { sx: { fontSize: 14, fontWeight: 600 } },
-                  }}
-                />
+                <Typography
+                  variant="caption"
+                  sx={{ fontFamily: t.mono, opacity: 0.55 }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </Typography>
+                <Typography sx={{ fontSize: 13 }}>{item.label}</Typography>
+                {page === item.page && (
+                  <Box
+                    sx={{
+                      ml: "auto",
+                      width: 5,
+                      height: 5,
+                      bgcolor: "primary.main",
+                      borderRadius: "50%",
+                    }}
+                  />
+                )}
               </ListItemButton>
             ))}
           </List>
-          <Box sx={{ mt: "auto", p: 1.5 }}>
-            <Typography variant="body2" color="primary.main">
-              Every game, a story.
+          <Box sx={{ mt: "auto", pt: 4, borderTop: 1, borderColor: "divider" }}>
+            <Typography
+              sx={{
+                fontFamily: t.display,
+                fontSize: 24,
+                letterSpacing: "-.04em",
+                lineHeight: 1.15,
+              }}
+            >
+              Good games.
+              <br />
+              Long memories.
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Make this space yours.
+            <Typography
+              variant="overline"
+              color="text.secondary"
+              sx={{ display: "block", mt: 2 }}
+            >
+              CURATED BY {name.split(" ")[0].toUpperCase()}
             </Typography>
+            <NorthEastRounded
+              sx={{ color: "primary.main", mt: 2, fontSize: 26 }}
+            />
           </Box>
-        </Paper>
-        <Box
-          component="main"
-          sx={{ minWidth: 0, px: { xs: 0.5, md: 0 }, pr: { md: 1 }, pb: 3 }}
-        >
+        </Box>
+        <Box component="main" sx={{ minWidth: 0, pb: 4 }}>
           {children}
         </Box>
       </Box>
@@ -274,15 +323,14 @@ export function AppShell({
           display: { xs: "block", md: "none" },
           position: "fixed",
           zIndex: 1200,
-          bottom: "calc(14px + env(safe-area-inset-bottom))",
           left: 16,
           right: 16,
+          bottom: "calc(16px + env(safe-area-inset-bottom))",
+          maxWidth: 460,
           mx: "auto",
-          maxWidth: 480,
           p: 0.75,
           borderRadius: 5,
-          bgcolor: "rgba(18,31,32,.9)",
-          boxShadow: "0 18px 60px #0009, inset 0 1px 0 #ffffff1a",
+          boxShadow: "0 12px 40px #0009, 0 0 0 5px #11131155",
         }}
       >
         <BottomNavigation
@@ -304,8 +352,8 @@ export function AppShell({
           ))}
           <BottomNavigationAction
             value="add"
-            label="Add game"
-            icon={<AddRounded />}
+            label="New entry"
+            icon={<AddRounded sx={{ color: "primary.main" }} />}
           />
           <BottomNavigationAction
             value="more"
@@ -321,7 +369,7 @@ export function AppShell({
         maxWidth="xs"
       >
         <DialogTitle>
-          Explore gamdow
+          The archive
           <IconButton
             aria-label="Close menu"
             onClick={() => setMore(false)}
@@ -332,14 +380,18 @@ export function AppShell({
         </DialogTitle>
         <DialogContent>
           <List>
-            {navigation.slice(3).map((item) => (
+            {navigation.slice(3).map((item, i) => (
               <ListItemButton
                 key={item.page}
                 onClick={() => go(item.page)}
                 selected={page === item.page}
+                sx={{ gap: 2, borderRadius: 1, py: 2 }}
               >
-                <ListItemIcon>{item.icon}</ListItemIcon>
-                <ListItemText primary={item.label} />
+                <Typography variant="overline" color="text.secondary">
+                  0{i + 4}
+                </Typography>
+                {item.icon}
+                <Typography>{item.label}</Typography>
               </ListItemButton>
             ))}
           </List>

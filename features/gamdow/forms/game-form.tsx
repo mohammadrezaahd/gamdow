@@ -1,19 +1,25 @@
 "use client";
+import { DateField } from "@/components/ui";
+import { ImageUpload } from "@/components/ui";
+import { imagePresets } from "@/lib/image";
+
+import {
+  Autocomplete,
+  Button,
+  Dialog,
+  MenuItem,
+  Switch,
+  TextField,
+} from "@/components/ui";
 import { useState } from "react";
 import {
   Alert,
-  Autocomplete,
   Box,
-  Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  MenuItem,
   Stack,
-  Switch,
-  TextField,
   Typography,
 } from "@mui/material";
 import type { Game, GameInput } from "@/types/game";
@@ -174,17 +180,19 @@ export function GameForm({
                 gap: 2,
               }}
             >
-              <TextField
-                label="Cover image URL"
-                type="url"
+              <ImageUpload
+                label="Cover"
+                preset={imagePresets.cover}
                 value={draft.coverImage}
-                onChange={(e) => field("coverImage", e.target.value)}
+                onImages={(images) => field("coverImage", images[0].src)}
+                onRemove={() => field("coverImage", "")}
               />
-              <TextField
-                label="Banner image URL"
-                type="url"
-                value={draft.heroImage ?? ""}
-                onChange={(e) => field("heroImage", e.target.value)}
+              <ImageUpload
+                label="Banner"
+                preset={imagePresets.banner}
+                value={draft.heroImage}
+                onImages={(images) => field("heroImage", images[0].src)}
+                onRemove={() => field("heroImage", "")}
               />
             </Box>
             <Typography variant="h5">Your experience</Typography>
@@ -245,13 +253,11 @@ export function GameForm({
                   ["plannedAt", "Planned start"],
                 ] as const
               ).map(([key, label]) => (
-                <TextField
+                <DateField
                   key={key}
                   label={label}
-                  type="date"
-                  slotProps={{ inputLabel: { shrink: true } }}
                   value={draft[key] ?? ""}
-                  onChange={(e) => field(key, e.target.value)}
+                  onValueChange={(value) => field(key, value)}
                 />
               ))}
               <TextField

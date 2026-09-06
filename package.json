@@ -1,1 +1,33 @@
-{"name":"gamdow","version":"0.1.0","private":true,"scripts":{"dev":"next dev","build":"next build","start":"next start"},"dependencies":{"@emotion/cache":"^11.14.0","@emotion/react":"^11.14.0","@emotion/styled":"^11.14.0","@mui/icons-material":"^9.4.0","@mui/material":"^9.4.0","@mui/material-nextjs":"^9.4.0","next":"^16.2.6","react":"^19.2.6","react-dom":"^19.2.6"},"devDependencies":{"@types/node":"^22.19.19","@types/react":"^19.2.14","@types/react-dom":"^19.2.3","typescript":"^5.9.3"}}
+{
+  "name": "gamdow",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@emotion/cache": "^11.14.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^9.4.0",
+    "@mui/material": "^9.4.0",
+    "@mui/material-nextjs": "^9.4.0",
+    "date-fns": "^4.4.0",
+    "next": "^16.2.6",
+    "react": "^19.2.6",
+    "react-day-picker": "^9.14.0",
+    "react-dom": "^19.2.6",
+    "react-easy-crop": "^5.5.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

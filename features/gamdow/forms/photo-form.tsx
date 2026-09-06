@@ -3,28 +3,25 @@ import { useState } from "react";
 import {
   Alert,
   Box,
-  Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  MenuItem,
   Stack,
-  Switch,
-  TextField,
   Typography,
 } from "@mui/material";
+import {
+  Button,
+  DateField,
+  Dialog,
+  ImageUpload,
+  MenuItem,
+  Switch,
+  TextField,
+} from "@/components/ui";
 import type { GalleryItem } from "@/types/game";
 import { newId, today, useLibrary } from "../library-context";
-import { GameImage } from "@/components/game-image";
-const readFile = (file: File) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("Could not read the image."));
-    reader.readAsDataURL(file);
-  });
+import { imagePresets } from "@/lib/image";
 export function PhotoForm({
   photo,
   gameId,
@@ -38,24 +35,22 @@ export function PhotoForm({
   const [selected, setSelected] = useState(
     photo?.gameId ?? gameId ?? data.games[0]?.id ?? "",
   );
-  const [url, setUrl] = useState(photo?.image ?? "");
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<string[]>(photo ? [photo.image] : []);
   const [caption, setCaption] = useState(photo?.caption ?? "");
   const [date, setDate] = useState(photo?.capturedAt ?? today());
   const [spoiler, setSpoiler] = useState(photo?.spoiler ?? false);
   const [favorite, setFavorite] = useState(photo?.favorite ?? false);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm">
       <Box
         component="form"
         onSubmit={(e) => {
           e.preventDefault();
-          if (!selected || (!url.trim() && !images.length))
-            return setError("Select a game and add an image.");
+          if (!selected || !images.length || !date)
+            return setError("Choose a game, an image and a capture date.");
           savePhotos(
-            (images.length ? images : [url.trim()]).map((image, i) => ({
+            images.map((image, i) => ({
               id: photo?.id ?? newId(),
               gameId: selected,
               image,
@@ -69,17 +64,20 @@ export function PhotoForm({
         }}
       >
         <DialogTitle>
-          {photo ? "Edit screenshot" : "Add screenshots"}
+          {photo ? "Edit the moment" : "Keep a moment"}
+          <Typography variant="body2" color="text.secondary">
+            Upload, frame, and add it to your story.
+          </Typography>
         </DialogTitle>
         <DialogContent dividers>
-          <Stack spacing={2}>
+          <Stack spacing={2.5}>
             {error && <Alert severity="error">{error}</Alert>}
             <TextField
               select
               label="Game"
-              required
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
+              required
             >
               {data.games.map((g) => (
                 <MenuItem key={g.id} value={g.id}>
@@ -87,83 +85,30 @@ export function PhotoForm({
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
-              label="Image URL"
-              type={url.startsWith("data:") ? "text" : "url"}
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-                setImages([]);
-              }}
+            <ImageUpload
+              label="Screenshots"
+              preset={imagePresets.screenshot}
+              multiple={!photo}
+              value={images[0]}
+              onImages={(items) => setImages(items.map((i) => i.src))}
+              onRemove={() => setImages([])}
             />
-            <Button component="label" variant="outlined" disabled={busy}>
-              Choose {photo ? "image" : "images"}
-              <input
-                hidden
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif"
-                multiple={!photo}
-                onChange={async (e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  e.target.value = "";
-                  setError("");
-                  if (!files.length) return;
-                  if (
-                    files.some(
-                      (f) =>
-                        ![
-                          "image/png",
-                          "image/jpeg",
-                          "image/webp",
-                          "image/gif",
-                        ].includes(f.type),
-                    ) ||
-                    files.reduce((n, f) => n + f.size, 0) > 2 * 1024 * 1024
-                  )
-                    return setError(
-                      "Choose PNG, JPEG, WebP or GIF images, up to 2 MB total. For larger images use a URL.",
-                    );
-                  setBusy(true);
-                  try {
-                    setImages(await Promise.all(files.map(readFile)));
-                    setUrl("");
-                  } catch {
-                    setError("The selected images could not be read.");
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              />
-            </Button>
-            <Typography variant="caption" color="text.secondary">
-              Up to 2 MB per batch. Images are saved in this browser.
-            </Typography>
-            {(images[0] || url) && (
-              <GameImage
-                src={images[0] || url}
-                sx={{
-                  width: "100%",
-                  maxHeight: 180,
-                  objectFit: "contain",
-                  borderRadius: 2,
-                }}
-              />
-            )}
             {images.length > 1 && (
-              <Typography>{images.length} images selected</Typography>
+              <Typography variant="caption" color="primary.main">
+                {images.length} cropped screenshots ready. Caption and flags
+                apply to all.
+              </Typography>
             )}
             <TextField
               label="Caption"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
             />
-            <TextField
-              type="date"
+            <DateField
               label="Captured on"
-              required
-              slotProps={{ inputLabel: { shrink: true } }}
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              required
+              onValueChange={setDate}
             />
             <FormControlLabel
               label="Contains spoilers"
@@ -187,7 +132,7 @@ export function PhotoForm({
           <Button
             type="submit"
             variant="contained"
-            disabled={busy || !data.games.length}
+            disabled={!data.games.length || !images.length}
           >
             Save screenshots
           </Button>

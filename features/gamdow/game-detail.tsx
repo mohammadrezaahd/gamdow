@@ -1,19 +1,16 @@
 "use client";
-import { useState } from "react";
+import { DateField } from "@/components/ui";
 import {
-  Box,
   Button,
   Chip,
-  Divider,
   IconButton,
   MenuItem,
-  Paper,
-  Stack,
   Tab,
   Tabs,
   TextField,
-  Typography,
-} from "@mui/material";
+} from "@/components/ui";
+import { useState } from "react";
+import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
 import {
   ArrowBackRounded,
   DeleteOutlineRounded,
@@ -322,14 +319,12 @@ export function GameDetail({
               }}
             >
               <Stack spacing={2}>
-                <TextField
-                  type="date"
+                <DateField
                   label="Entry date"
                   required
                   value={entry.date}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  onChange={(e) =>
-                    setEntry((j) => ({ ...j, date: e.target.value }))
+                  onValueChange={(value) =>
+                    setEntry((j) => ({ ...j, date: value }))
                   }
                 />
                 <TextField

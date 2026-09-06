@@ -1,15 +1,12 @@
 "use client";
+import { Autocomplete, Button, Dialog, TextField } from "@/components/ui";
 import { useState } from "react";
 import {
-  Autocomplete,
   Box,
-  Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Stack,
-  TextField,
 } from "@mui/material";
 import type { GameCollection } from "@/types/game";
 import { newId, useLibrary } from "../library-context";

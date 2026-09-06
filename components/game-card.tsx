@@ -1,39 +1,49 @@
 "use client";
-
-import FavoriteBorderRounded from "@mui/icons-material/FavoriteBorderRounded";
-import FavoriteRounded from "@mui/icons-material/FavoriteRounded";
-import StarRounded from "@mui/icons-material/StarRounded";
+import { Box, CardActionArea, Stack, Typography } from "@mui/material";
 import {
-  Box,
-  Card,
-  CardActionArea,
-  Chip,
-  IconButton,
-  Stack,
-  Typography,
-} from "@mui/material";
+  FavoriteBorderRounded,
+  FavoriteRounded,
+  NorthEastRounded,
+} from "@mui/icons-material";
+import { Chip, IconButton } from "@/components/ui";
 import { GameImage } from "./game-image";
+import { archiveTokens as t } from "@/theme/gamdow-theme";
 import type { Game } from "@/types/game";
-
-type GameCardProps = {
+export function GameCard({
+  game,
+  onSelect,
+  onFavorite,
+}: {
   game: Game;
   onSelect: (game: Game) => void;
   onFavorite: (id: string) => void;
-};
-
-export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
+}) {
   return (
-    <Card sx={{ overflow: "hidden", position: "relative", minHeight: 286 }}>
+    <Box
+      sx={{
+        position: "relative",
+        minWidth: 0,
+        "&:hover .archive-cover": {
+          transform: "translateY(-5px)",
+          boxShadow: "0 18px 35px #0008",
+        },
+        "&:hover .archive-open": { opacity: 1, transform: "translate(0,0)" },
+      }}
+    >
       <CardActionArea
         onClick={() => onSelect(game)}
-        sx={{ height: "100%", alignItems: "stretch" }}
+        sx={{ borderRadius: 1, overflow: "visible" }}
       >
         <Box
+          className="archive-cover"
           sx={{
-            height: 212,
             position: "relative",
+            aspectRatio: "2 / 3",
             overflow: "hidden",
+            borderRadius: "7px 7px 2px 2px",
             bgcolor: "background.paper",
+            border: "1px solid #fff2",
+            transition: "transform .25s, box-shadow .25s",
           }}
         >
           <GameImage
@@ -43,8 +53,15 @@ export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              transition: "transform .25s",
-              ".MuiCardActionArea-root:hover &": { transform: "scale(1.04)" },
+              display: "block",
+            }}
+          />
+          <Box
+            sx={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, #0003, transparent 40%, #0009)",
             }}
           />
           <Chip
@@ -52,47 +69,103 @@ export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
             size="small"
             sx={{
               position: "absolute",
-              top: 10,
+              bottom: 12,
               left: 10,
-              bgcolor: "rgba(12,16,29,.82)",
+              color: "#eeeee5",
+              background: "#111311c9",
+              backdropFilter: "blur(12px)",
+              fontSize: 9,
             }}
           />
+          {game.rating !== undefined && (
+            <Box
+              sx={{
+                position: "absolute",
+                right: 0,
+                bottom: 0,
+                bgcolor: "primary.main",
+                color: "primary.contrastText",
+                p: "7px 10px",
+                fontFamily: t.display,
+                fontWeight: 700,
+                fontSize: 18,
+                borderRadius: "8px 0 0 0",
+              }}
+            >
+              {game.rating.toFixed(1)}
+            </Box>
+          )}
+          <Box
+            className="archive-open"
+            sx={{
+              position: "absolute",
+              right: 12,
+              top: 58,
+              color: "primary.main",
+              opacity: 0,
+              transform: "translate(-4px,4px)",
+              transition: "all .2s",
+            }}
+          >
+            <NorthEastRounded />
+          </Box>
         </Box>
-        <Stack spacing={0.5} sx={{ p: 1.5, alignItems: "flex-start" }}>
-          <Typography noWrap sx={{ fontWeight: 800, width: "100%" }}>
+        <Box sx={{ pt: 1.5, pb: 0.5 }}>
+          <Typography
+            sx={{
+              fontFamily: t.display,
+              fontSize: { xs: 13, md: 15 },
+              fontWeight: 700,
+              letterSpacing: "-.02em",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {game.title}
           </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
-            {game.genres.slice(0, 2).join(" · ")}
-          </Typography>
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-            <StarRounded color="warning" fontSize="small" />
-            <Typography variant="body2" sx={{ fontWeight: 800 }}>
-              {game.rating !== undefined ? game.rating.toFixed(1) : "Unrated"}
+          <Stack
+            direction="row"
+            sx={{ justifyContent: "space-between", mt: 0.7, gap: 1 }}
+          >
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              noWrap
+              sx={{ fontSize: 10 }}
+            >
+              {game.genres[0] || "Unsorted"}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              · {game.platform}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ fontFamily: t.mono, whiteSpace: "nowrap", fontSize: 9 }}
+            >
+              {game.platform || "—"} / {game.releaseYear || "—"}
             </Typography>
           </Stack>
-        </Stack>
+        </Box>
       </CardActionArea>
       <IconButton
-        aria-label="Toggle favorite"
+        aria-label={`Favorite ${game.title}`}
+        aria-pressed={game.favorite}
         onClick={() => onFavorite(game.id)}
+        size="small"
         sx={{
           position: "absolute",
-          top: 6,
-          right: 6,
-          bgcolor: "rgba(12,16,29,.82)",
-          "&:hover": { bgcolor: "rgba(12,16,29,.96)" },
+          right: 8,
+          top: 8,
+          background: "#11131188",
+          backdropFilter: "blur(14px)",
+          color: game.favorite ? "primary.main" : "#fff9",
         }}
       >
         {game.favorite ? (
-          <FavoriteRounded color="primary" fontSize="small" />
+          <FavoriteRounded sx={{ fontSize: 16 }} />
         ) : (
-          <FavoriteBorderRounded fontSize="small" />
+          <FavoriteBorderRounded sx={{ fontSize: 16 }} />
         )}
       </IconButton>
-    </Card>
+    </Box>
   );
 }

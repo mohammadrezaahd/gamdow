@@ -1,29 +1,23 @@
 "use client";
-import { useState } from "react";
 import {
-  Box,
   Button,
-  Card,
-  CardActionArea,
   Chip,
-  IconButton,
+  SortableBoard,
   MenuItem,
-  Stack,
   Tab,
   Tabs,
   TextField,
-  Typography,
-} from "@mui/material";
-import {
-  ArrowBackRounded,
-  ArrowDownwardRounded,
-  ArrowUpwardRounded,
-} from "@mui/icons-material";
+} from "@/components/ui";
+import { useState } from "react";
+import { Box, Card, CardActionArea, Stack, Typography } from "@mui/material";
+import { ArrowBackRounded } from "@mui/icons-material";
 import {
   ConfirmDialog,
   EmptyState,
   SectionTitle,
 } from "@/components/page-parts";
+import { GameCard } from "@/components/game-card";
+import { GameImage } from "@/components/game-image";
 import { GameGrid } from "@/components/game-grid";
 import { CollectionForm } from "../forms/collection-form";
 import { useLibrary } from "../library-context";
@@ -76,14 +70,6 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
             ? (a.releaseYear ?? 0) - (b.releaseYear ?? 0)
             : 0,
     );
-  const shift = (id: string, delta: number) => {
-    if (!collection) return;
-    const ids = [...collection.gameIds];
-    const i = ids.indexOf(id);
-    if (i + delta < 0 || i + delta >= ids.length) return;
-    [ids[i], ids[i + delta]] = [ids[i + delta], ids[i]];
-    saveCollection({ ...collection, gameIds: ids });
-  };
   return (
     <>
       {selected && (
@@ -135,7 +121,11 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
           <Typography color="text.secondary" sx={{ mb: 3 }}>
             {group.description}
           </Typography>
-          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            sx={{ mb: 2 }}
+          >
             <TextField
               select
               size="small"
@@ -177,6 +167,45 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
               title="No games here yet"
               description="Edit this collection to choose games, or adjust your filters."
             />
+          ) : collection && status === "All" && sort === "default" ? (
+            <>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mb: 2 }}
+              >
+                Drag the grip to arrange your shelf. Space + arrow keys work
+                too.
+              </Typography>
+              <SortableBoard
+                layout="grid"
+                groups={[
+                  {
+                    id: `collection-${collection.id}`,
+                    title: collection.name,
+                    itemIds: collection.gameIds,
+                  },
+                ]}
+                onChange={(groups) =>
+                  saveCollection({ ...collection, gameIds: groups[0].itemIds })
+                }
+                getLabel={(id) =>
+                  data.games.find((g) => g.id === id)?.title ?? "game"
+                }
+                renderItem={(id) => {
+                  const game = data.games.find((g) => g.id === id);
+                  return game ? (
+                    <GameCard
+                      game={game}
+                      onSelect={(g) => onGame(g.id)}
+                      onFavorite={() =>
+                        saveGame({ ...game, favorite: !game.favorite })
+                      }
+                    />
+                  ) : null;
+                }}
+              />
+            </>
           ) : (
             <GameGrid
               games={games}
@@ -186,40 +215,6 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
                 if (g) saveGame({ ...g, favorite: !g.favorite });
               }}
             />
-          )}
-          {collection && collection.gameIds.length > 1 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="h5" sx={{ mb: 1 }}>
-                Collection order
-              </Typography>
-              {collection.gameIds.map((id, i) => (
-                <Stack
-                  key={id}
-                  direction="row"
-                  sx={{ justifyContent: "space-between", alignItems: "center" }}
-                >
-                  <Typography variant="body2">
-                    {i + 1}. {data.games.find((g) => g.id === id)?.title}
-                  </Typography>
-                  <Box>
-                    <IconButton
-                      aria-label="Move game up"
-                      disabled={i === 0}
-                      onClick={() => shift(id, -1)}
-                    >
-                      <ArrowUpwardRounded fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Move game down"
-                      disabled={i === collection.gameIds.length - 1}
-                      onClick={() => shift(id, 1)}
-                    >
-                      <ArrowDownwardRounded fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Stack>
-              ))}
-            </Box>
           )}
         </>
       ) : groups.length ? (
@@ -236,12 +231,48 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
                 onClick={() => setSelected(g.id)}
                 sx={{
                   p: 3,
-                  minHeight: 220,
-                  background: `radial-gradient(ellipse at 100% 0%, ${i % 2 ? "#6a9bb52b" : "#b9db6d20"}, transparent 75%)`,
+                  minHeight: 280,
+                  background: "#161c15",
                 }}
               >
-                <Chip size="small" label={`${g.ids.length} games`} />
-                <Typography variant="h5" sx={{ mt: 5 }}>
+                <Stack
+                  direction="row"
+                  sx={{ justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <Typography variant="overline" color="text.secondary">
+                    SHELF / {String(i + 1).padStart(2, "0")}
+                  </Typography>
+                  <Chip size="small" label={`${g.ids.length} games`} />
+                </Stack>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    height: 145,
+                    pt: 3,
+                    pb: 1,
+                  }}
+                >
+                  {g.ids.slice(0, 3).map((id, index) => (
+                    <GameImage
+                      key={id}
+                      src={
+                        data.games.find((game) => game.id === id)?.coverImage
+                      }
+                      sx={{
+                        height: 120,
+                        width: 80,
+                        objectFit: "cover",
+                        borderRadius: 0.5,
+                        transform: `rotate(${(index - 1) * 10}deg) translateY(${index === 1 ? -8 : 0}px)`,
+                        ml: index ? -1.5 : 0,
+                        boxShadow: "0 12px 20px #0009",
+                        border: "1px solid #fff2",
+                      }}
+                    />
+                  ))}
+                </Box>
+                <Typography variant="h5" sx={{ mt: 3 }}>
                   {g.name}
                 </Typography>
                 <Typography

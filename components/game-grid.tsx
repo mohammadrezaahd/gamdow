@@ -16,9 +16,9 @@ export function GameGrid({ games, onSelect, onFavorite }: GameGridProps) {
         gridTemplateColumns: {
           xs: "repeat(2,minmax(0,1fr))",
           sm: "repeat(3,minmax(0,1fr))",
-          lg: "repeat(auto-fill,minmax(210px,1fr))",
+          lg: "repeat(auto-fill,minmax(170px,1fr))",
         },
-        gap: { xs: 1.25, md: 2 },
+        gap: { xs: 2, md: 2.5 },
       }}
     >
       {games.map((game) => (

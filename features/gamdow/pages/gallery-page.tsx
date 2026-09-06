@@ -1,19 +1,22 @@
 "use client";
+import { DateField } from "@/components/ui";
+import {
+  Button,
+  Dialog,
+  IconButton,
+  MenuItem,
+  Switch,
+  TextField,
+} from "@/components/ui";
 import { useState } from "react";
 import {
   Box,
-  Button,
   Card,
   CardActionArea,
-  Dialog,
   DialogContent,
   DialogTitle,
   FormControlLabel,
-  IconButton,
-  MenuItem,
   Stack,
-  Switch,
-  TextField,
   Typography,
 } from "@mui/material";
 import {
@@ -96,13 +99,11 @@ export function GalleryPage({
             ))}
           </TextField>
         )}
-        <TextField
+        <DateField
           label="From date"
-          type="date"
           size="small"
-          slotProps={{ inputLabel: { shrink: true } }}
           value={date}
-          onChange={(e) => setDate(e.target.value)}
+          onValueChange={(value) => setDate(value)}
         />
         <FormControlLabel
           label="Favorites only"

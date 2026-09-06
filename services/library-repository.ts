@@ -1,3 +1,4 @@
+import { readSnapshot, writeSnapshot } from "./browser-store";
 import {
   fakeCollections,
   fakeGalleryItems,
@@ -151,12 +152,15 @@ export function parseLibrary(value: unknown): LibrarySnapshot {
 // Replace this adapter with an HTTP repository when the API is available.
 export const libraryRepository: LibraryRepository = {
   async load() {
+    const snapshot = await readSnapshot();
+    if (snapshot !== undefined) return parseLibrary(snapshot);
+    // Migrate an existing v1 localStorage archive without deleting its backup.
     const saved = localStorage.getItem(key);
     return saved
       ? parseLibrary(JSON.parse(saved))
       : structuredClone(initialLibrary);
   },
   async save(snapshot) {
-    localStorage.setItem(key, JSON.stringify(snapshot));
+    await writeSnapshot(snapshot);
   },
 };

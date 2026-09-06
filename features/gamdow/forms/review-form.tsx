@@ -1,16 +1,13 @@
 "use client";
+import { Button, Dialog, Switch, TextField } from "@/components/ui";
 import { useState } from "react";
 import {
   Box,
-  Button,
-  Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   FormControlLabel,
   Stack,
-  Switch,
-  TextField,
   Typography,
 } from "@mui/material";
 import type { Game, ScoreBreakdown } from "@/types/game";

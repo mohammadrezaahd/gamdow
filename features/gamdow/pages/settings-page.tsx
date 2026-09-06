@@ -1,15 +1,12 @@
 "use client";
+import { Button, MenuItem, Switch, TextField } from "@/components/ui";
 import { useState } from "react";
 import {
   Alert,
   Box,
-  Button,
   FormControlLabel,
-  MenuItem,
   Paper,
   Stack,
-  Switch,
-  TextField,
   Typography,
 } from "@mui/material";
 import { ConfirmDialog, SectionTitle } from "@/components/page-parts";
@@ -115,8 +112,8 @@ export function SettingsPage() {
                   if (!file) return;
                   setError("");
                   try {
-                    if (file.size > 15 * 1024 * 1024)
-                      throw new Error("Choose a backup smaller than 15 MB.");
+                    if (file.size > 100 * 1024 * 1024)
+                      throw new Error("Choose a backup smaller than 100 MB.");
                     setRestore(parseLibrary(JSON.parse(await file.text())));
                   } catch (error) {
                     setError(

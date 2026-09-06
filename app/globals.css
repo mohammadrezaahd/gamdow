@@ -1,6 +1,25 @@
+@font-face {
+  font-family: "DM Sans";
+  src: url("/fonts/dm-sans.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/fonts/space-grotesk-bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+:root {
+  color-scheme: dark;
+  --archive-acid: #d3fc72;
+  --archive-line: #e3efd31f;
+}
 html,
 body {
   min-height: 100%;
+  background: #111311;
+  color: #eeeee5;
 }
 body {
   margin: 0;
@@ -9,24 +28,71 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse at 8% 12%, #20453588, transparent 46%),
-    radial-gradient(ellipse at 96% 42%, #24485a66, transparent 42%),
-    radial-gradient(ellipse at 40% 100%, #34412044, transparent 44%);
+  z-index: -1;
+  opacity: 0.25;
+  background-image: radial-gradient(#eef9d922 0.6px, transparent 0.6px);
+  background-size: 5px 5px;
 }
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #59614c #141711;
 }
 ::selection {
-  background: #d4f77d55;
+  background: #d3fc72;
+  color: #111311;
 }
 button,
 a,
 input,
 textarea {
   -webkit-tap-highlight-color: transparent;
+}
+.archive-calendar {
+  --rdp-accent-color: #d3fc72;
+  --rdp-accent-background-color: #d3fc721a;
+  --rdp-day-height: 38px;
+  --rdp-day-width: 38px;
+  --rdp-day_button-height: 34px;
+  --rdp-day_button-width: 34px;
+  --rdp-day_button-border-radius: 5px;
+  --rdp-selected-border: 1px solid #d3fc72;
+  --rdp-outside-opacity: 0.3;
+  font-family: "DM Sans", sans-serif;
+}
+.archive-calendar .rdp-caption_label {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+}
+.archive-calendar .rdp-weekday {
+  font-family: Consolas, monospace;
+  font-size: 10px;
+  color: #a3ab9a;
+}
+.archive-calendar .rdp-selected .rdp-day_button {
+  background: #d3fc72;
+  color: #111311;
+}
+.archive-calendar button:hover {
+  background-color: #d3fc7215;
+}
+.archive-calendar button:focus-visible {
+  outline: 2px solid #d3fc72;
+  outline-offset: 2px;
+}
+.archive-calendar .rdp-today:not(.rdp-selected) {
+  color: #d3fc72;
+}
+.archive-calendar .rdp-dropdowns {
+  gap: 8px;
+}
+@media (max-width: 380px) {
+  .archive-calendar {
+    --rdp-day-width: 34px;
+    --rdp-day_button-width: 32px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
