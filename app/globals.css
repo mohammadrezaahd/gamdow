@@ -2,11 +2,38 @@ html,
 body {
   min-height: 100%;
 }
-
 body {
   margin: 0;
 }
-
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 8% 12%, #20453588, transparent 46%),
+    radial-gradient(ellipse at 96% 42%, #24485a66, transparent 42%),
+    radial-gradient(ellipse at 40% 100%, #34412044, transparent 44%);
+}
 * {
   box-sizing: border-box;
+}
+::selection {
+  background: #d4f77d55;
+}
+button,
+a,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
 }

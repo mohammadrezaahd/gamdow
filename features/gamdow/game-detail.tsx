@@ -1,32 +1,437 @@
 "use client";
-
-import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
-import FavoriteBorderRounded from "@mui/icons-material/FavoriteBorderRounded";
-import FavoriteRounded from "@mui/icons-material/FavoriteRounded";
-import StarRounded from "@mui/icons-material/StarRounded";
-import { Box, Button, Chip, Divider, IconButton, Paper, Stack, Tab, Tabs, Typography } from "@mui/material";
 import { useState } from "react";
-import type { Game } from "@/types/game";
-
-type GameDetailProps = { game: Game; onBack: () => void; onFavorite: (id: string) => void };
-
-export function GameDetail({ game, onBack, onFavorite }: GameDetailProps) {
-  const [tab, setTab] = useState(0);
-  return <Box>
-    <Button startIcon={<ArrowBackRounded />} onClick={onBack} sx={{ mb: 2 }}>Back to library</Button>
-    <Paper sx={{ overflow: "hidden", position: "relative", minHeight: 360, display: "flex", alignItems: "end", p: { xs: 2.5, md: 4 }, background: "linear-gradient(90deg,#111326 20%,rgba(17,19,38,.64)), #111326" }}>
-      <Box component="img" src={game.heroImage ?? game.coverImage} alt="" sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: .38, zIndex: 0 }} />
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5} alignItems={{ sm: "end" }} sx={{ zIndex: 1 }}>
-        <Box component="img" src={game.coverImage} alt={game.title} sx={{ width: 120, height: 170, objectFit: "cover", borderRadius: 2, boxShadow: 8 }} />
-        <Box><Stack direction="row" alignItems="center" spacing={1}><Chip size="small" color={game.status === "Completed" ? "success" : "primary"} label={game.status} /><Typography variant="body2">{game.releaseYear} · {game.platform}</Typography></Stack><Typography variant="h2" sx={{ mt: 1 }}>{game.title}</Typography><Typography color="text.secondary" sx={{ mt: 1, maxWidth: 650 }}>{game.description}</Typography><Stack direction="row" spacing={1} sx={{ mt: 2 }}>{game.rating && <Chip icon={<StarRounded />} label={`${game.rating}/10`} color="secondary" />}<Chip label={game.genres.join(" · ")} /></Stack></Box>
+import {
+  Box,
+  Button,
+  Chip,
+  Divider,
+  IconButton,
+  MenuItem,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+} from "@mui/material";
+import {
+  ArrowBackRounded,
+  DeleteOutlineRounded,
+  EditRounded,
+  FavoriteBorderRounded,
+  FavoriteRounded,
+} from "@mui/icons-material";
+import type { Game, JournalEntry } from "@/types/game";
+import { GameImage } from "@/components/game-image";
+import { ConfirmDialog, EmptyState } from "@/components/page-parts";
+import { statuses } from "@/services/library-repository";
+import { newId, today, useLibrary } from "./library-context";
+import { ReviewForm } from "./forms/review-form";
+import { GalleryPage } from "./pages/gallery-page";
+export function GameDetail({
+  game,
+  onBack,
+  onEdit,
+  initialTab = 0,
+  onGame,
+}: {
+  game: Game;
+  onBack: () => void;
+  onEdit: () => void;
+  initialTab?: number;
+  onGame: (id: string) => void;
+}) {
+  const { data, saveGame, deleteGame } = useLibrary();
+  const [tab, setTab] = useState(initialTab);
+  const [review, setReview] = useState(false);
+  const [remove, setRemove] = useState<"game" | "review" | JournalEntry | null>(
+    null,
+  );
+  const [entry, setEntry] = useState<JournalEntry>({
+    id: newId(),
+    date: today(),
+    text: "",
+  });
+  const [reveal, setReveal] = useState(false);
+  const resetEntry = () => setEntry({ id: newId(), date: today(), text: "" });
+  return (
+    <Box>
+      <Stack
+        direction="row"
+        sx={{ ...{ mb: 2 }, justifyContent: "space-between" }}
+      >
+        <Button startIcon={<ArrowBackRounded />} onClick={onBack}>
+          Back
+        </Button>
+        <Stack direction="row">
+          <Button startIcon={<EditRounded />} onClick={onEdit}>
+            Edit game
+          </Button>
+          <IconButton
+            aria-label="Delete game"
+            onClick={() => setRemove("game")}
+          >
+            <DeleteOutlineRounded />
+          </IconButton>
+        </Stack>
       </Stack>
-      <IconButton aria-label="Toggle favorite" onClick={() => onFavorite(game.id)} sx={{ position: "absolute", top: 16, right: 16, bgcolor: "rgba(10,12,24,.65)" }}>{game.favorite ? <FavoriteRounded color="secondary" /> : <FavoriteBorderRounded />}</IconButton>
-    </Paper>
-    <Paper variant="outlined" sx={{ mt: 2, p: { xs: 2, md: 3 } }}>
-      <Tabs value={tab} onChange={(_, value) => setTab(value)} sx={{ mb: 2 }}><Tab label="Overview" /><Tab label="Review" /><Tab label="Journal" /></Tabs><Divider sx={{ mb: 2.5 }} />
-      {tab === 0 && <Stack spacing={2}><Typography>{game.description}</Typography><Box sx={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 1.5 }}><Paper variant="outlined" sx={{ p: 1.5 }}><Typography variant="caption" color="text.secondary">Status</Typography><Typography fontWeight={800}>{game.status}</Typography></Paper><Paper variant="outlined" sx={{ p: 1.5 }}><Typography variant="caption" color="text.secondary">Play plan</Typography><Typography fontWeight={800}>{game.plan}</Typography></Paper><Paper variant="outlined" sx={{ p: 1.5 }}><Typography variant="caption" color="text.secondary">Hours</Typography><Typography fontWeight={800}>{game.hoursPlayed ?? 0}h</Typography></Paper></Box></Stack>}
-      {tab === 1 && <Typography color={game.review ? "text.primary" : "text.secondary"}>{game.review ?? "No review yet. Add your thoughts when you are ready."}</Typography>}
-      {tab === 2 && <Stack spacing={1.5}>{game.journalEntries.length ? game.journalEntries.map((entry) => <Paper key={entry.id} variant="outlined" sx={{ p: 1.5 }}><Typography variant="caption" color="primary.main">{entry.date}</Typography><Typography sx={{ mt: .5 }}>{entry.text}</Typography></Paper>) : <Typography color="text.secondary">No journal entries yet.</Typography>}</Stack>}
-    </Paper>
-  </Box>;
+      <Paper
+        sx={{
+          overflow: "hidden",
+          position: "relative",
+          minHeight: 340,
+          display: "flex",
+          alignItems: "end",
+          p: { xs: 2.5, md: 4 },
+        }}
+      >
+        <GameImage
+          src={game.heroImage || game.coverImage}
+          sx={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            opacity: 0.35,
+          }}
+        />
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            background: "linear-gradient(0deg, #0d181bee, #0d181b11)",
+          }}
+        />
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={3}
+          sx={{
+            ...{ position: "relative", width: "100%" },
+            alignItems: { sm: "end" },
+          }}
+        >
+          <GameImage
+            src={game.coverImage}
+            alt={game.title}
+            sx={{
+              width: 110,
+              height: 155,
+              objectFit: "cover",
+              borderRadius: 2,
+              boxShadow: 8,
+            }}
+          />
+          <Box sx={{ minWidth: 0 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
+              <Chip size="small" color="primary" label={game.status} />
+              <Typography variant="body2">
+                {[game.releaseYear, game.platform, game.edition]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </Typography>
+            </Stack>
+            <Typography variant="h2" sx={{ mt: 1 }}>
+              {game.title}
+            </Typography>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ ...{ mt: 2 }, flexWrap: "wrap" }}
+              useFlexGap
+            >
+              {game.rating !== undefined && (
+                <Chip color="primary" label={`${game.rating} / 10`} />
+              )}
+              {game.genres.map((g) => (
+                <Chip key={g} label={g} />
+              ))}
+            </Stack>
+          </Box>
+        </Stack>
+        <IconButton
+          aria-label="Toggle favorite"
+          onClick={() => saveGame({ ...game, favorite: !game.favorite })}
+          sx={{ position: "absolute", top: 16, right: 16 }}
+        >
+          {game.favorite ? (
+            <FavoriteRounded color="primary" />
+          ) : (
+            <FavoriteBorderRounded />
+          )}
+        </IconButton>
+      </Paper>
+      <Paper sx={{ mt: 2, p: { xs: 2, md: 3 } }}>
+        <Tabs
+          value={tab}
+          onChange={(_, v) => setTab(v)}
+          variant="scrollable"
+          allowScrollButtonsMobile
+          sx={{ mb: 3 }}
+        >
+          <Tab label="Overview" />
+          <Tab label="Review" />
+          <Tab label="Gallery" />
+          <Tab label="Journal" />
+        </Tabs>
+        {tab === 0 && (
+          <Stack spacing={3}>
+            <Typography color="text.secondary">
+              {game.description || "Add a description to make this page yours."}
+            </Typography>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { sm: "repeat(3,minmax(0,1fr))" },
+                gap: 2,
+              }}
+            >
+              <TextField
+                select
+                label="Status"
+                value={game.status}
+                onChange={(e) =>
+                  saveGame({
+                    ...game,
+                    status: e.target.value as Game["status"],
+                  })
+                }
+              >
+                {statuses.map((s) => (
+                  <MenuItem key={s} value={s}>
+                    {s}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="caption">Play plan</Typography>
+                <Typography>
+                  {game.plan}
+                  {game.plannedAt ? ` · ${game.plannedAt}` : ""}
+                </Typography>
+              </Paper>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="caption">Time played</Typography>
+                <Typography>
+                  {game.hoursPlayed === undefined
+                    ? "Not recorded"
+                    : `${game.hoursPlayed} hours`}
+                </Typography>
+              </Paper>
+            </Box>
+            <Typography color="text.secondary">
+              Started: {game.startedAt || "Not recorded"} · Finished:{" "}
+              {game.completedAt || "Not recorded"}
+            </Typography>
+            {game.planNote && <Typography>{game.planNote}</Typography>}
+            <Typography>Series: {game.series || "No series"}</Typography>
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
+              {data.collections
+                .filter((c) => c.gameIds.includes(game.id))
+                .map((c) => (
+                  <Chip key={c.id} label={c.name} />
+                ))}
+            </Stack>
+            <Box>
+              <Button variant="outlined" onClick={onEdit}>
+                Manage details & collections
+              </Button>
+            </Box>
+          </Stack>
+        )}
+        {tab === 1 && (
+          <Stack spacing={2}>
+            <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+              <Typography variant="h5">
+                Your verdict
+                {game.rating !== undefined ? ` · ${game.rating}/10` : ""}
+              </Typography>
+              <Button onClick={() => setReview(true)}>
+                {game.review ? "Edit review" : "Write review"}
+              </Button>
+            </Stack>
+            {game.reviewSpoiler && data.preferences.hideSpoilers && !reveal ? (
+              <Button onClick={() => setReveal(true)}>
+                Reveal spoiler review
+              </Button>
+            ) : (
+              <>
+                <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                  {game.review ||
+                    "What stayed with you? Put your experience into words."}
+                </Typography>
+                {game.reviewPros && (
+                  <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                    What worked: {game.reviewPros}
+                  </Typography>
+                )}
+                {game.reviewCons && (
+                  <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                    What didn’t: {game.reviewCons}
+                  </Typography>
+                )}
+              </>
+            )}
+            <Stack
+              direction="row"
+              spacing={1}
+              useFlexGap
+              sx={{ flexWrap: "wrap" }}
+            >
+              {Object.entries(game.scoreBreakdown ?? {})
+                .filter(([, value]) => value !== undefined)
+                .map(([key, value]) => (
+                  <Chip key={key} label={`${key}: ${value}/10`} />
+                ))}
+            </Stack>
+            {game.review && (
+              <Box>
+                <Button color="error" onClick={() => setRemove("review")}>
+                  Delete review
+                </Button>
+              </Box>
+            )}
+          </Stack>
+        )}
+        {tab === 2 && <GalleryPage gameId={game.id} onGame={onGame} />}
+        {tab === 3 && (
+          <Stack spacing={2}>
+            <Box
+              component="form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!entry.text.trim()) return;
+                saveGame({
+                  ...game,
+                  journalEntries: [
+                    ...game.journalEntries.filter((j) => j.id !== entry.id),
+                    { ...entry, text: entry.text.trim() },
+                  ].sort((a, b) => b.date.localeCompare(a.date)),
+                });
+                resetEntry();
+              }}
+            >
+              <Stack spacing={2}>
+                <TextField
+                  type="date"
+                  label="Entry date"
+                  required
+                  value={entry.date}
+                  slotProps={{ inputLabel: { shrink: true } }}
+                  onChange={(e) =>
+                    setEntry((j) => ({ ...j, date: e.target.value }))
+                  }
+                />
+                <TextField
+                  label="A note from your journey"
+                  required
+                  multiline
+                  minRows={3}
+                  value={entry.text}
+                  onChange={(e) =>
+                    setEntry((j) => ({ ...j, text: e.target.value }))
+                  }
+                />
+                <Stack direction="row" spacing={1}>
+                  <Button type="submit" variant="contained">
+                    {game.journalEntries.some((j) => j.id === entry.id)
+                      ? "Update entry"
+                      : "Add entry"}
+                  </Button>
+                  {game.journalEntries.some((j) => j.id === entry.id) && (
+                    <Button onClick={resetEntry}>Cancel edit</Button>
+                  )}
+                </Stack>
+              </Stack>
+            </Box>
+            <Divider />
+            {game.journalEntries.length ? (
+              game.journalEntries.map((j) => (
+                <Paper key={j.id} sx={{ p: 2 }}>
+                  <Stack
+                    direction="row"
+                    sx={{ justifyContent: "space-between" }}
+                  >
+                    <Typography color="primary.main" variant="caption">
+                      {j.date}
+                    </Typography>
+                    <Stack direction="row">
+                      <IconButton
+                        size="small"
+                        aria-label="Edit journal entry"
+                        onClick={() => setEntry(j)}
+                      >
+                        <EditRounded fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        aria-label="Delete journal entry"
+                        onClick={() => setRemove(j)}
+                      >
+                        <DeleteOutlineRounded fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  </Stack>
+                  <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                    {j.text}
+                  </Typography>
+                </Paper>
+              ))
+            ) : (
+              <EmptyState
+                title="Your journal starts here"
+                description="Keep track of discoveries, milestones and thoughts along the way."
+              />
+            )}
+          </Stack>
+        )}
+      </Paper>
+      {review && <ReviewForm game={game} onClose={() => setReview(false)} />}
+      {remove && (
+        <ConfirmDialog
+          title={`Delete ${remove === "game" ? "game" : remove === "review" ? "review" : "journal entry"}?`}
+          description={
+            remove === "game"
+              ? "This also removes its review, journal, gallery images and collection memberships."
+              : "This entry will be removed from your game."
+          }
+          onClose={() => setRemove(null)}
+          onConfirm={() => {
+            if (remove === "game") {
+              deleteGame(game.id);
+              onBack();
+            } else if (remove === "review")
+              saveGame({
+                ...game,
+                review: undefined,
+                reviewPros: undefined,
+                reviewCons: undefined,
+                reviewSpoiler: false,
+                scoreBreakdown: undefined,
+              });
+            else {
+              saveGame({
+                ...game,
+                journalEntries: game.journalEntries.filter(
+                  (j) => j.id !== remove.id,
+                ),
+              });
+              if (entry.id === remove.id) resetEntry();
+            }
+            setRemove(null);
+          }}
+        />
+      )}
+    </Box>
+  );
 }

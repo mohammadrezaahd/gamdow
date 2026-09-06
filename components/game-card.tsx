@@ -12,6 +12,7 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { GameImage } from "./game-image";
 import type { Game } from "@/types/game";
 
 type GameCardProps = {
@@ -35,8 +36,7 @@ export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
             bgcolor: "background.paper",
           }}
         >
-          <Box
-            component="img"
+          <GameImage
             src={game.coverImage}
             alt={game.title}
             sx={{
@@ -59,16 +59,16 @@ export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
           />
         </Box>
         <Stack spacing={0.5} sx={{ p: 1.5, alignItems: "flex-start" }}>
-          <Typography fontWeight={800} noWrap width="100%">
+          <Typography noWrap sx={{ fontWeight: 800, width: "100%" }}>
             {game.title}
           </Typography>
           <Typography variant="caption" color="text.secondary" noWrap>
             {game.genres.slice(0, 2).join(" · ")}
           </Typography>
-          <Stack direction="row" spacing={0.5} alignItems="center">
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
             <StarRounded color="warning" fontSize="small" />
-            <Typography variant="body2" fontWeight={800}>
-              {game.rating ? game.rating.toFixed(1) : "Unrated"}
+            <Typography variant="body2" sx={{ fontWeight: 800 }}>
+              {game.rating !== undefined ? game.rating.toFixed(1) : "Unrated"}
             </Typography>
             <Typography variant="caption" color="text.secondary">
               · {game.platform}
@@ -88,7 +88,7 @@ export function GameCard({ game, onSelect, onFavorite }: GameCardProps) {
         }}
       >
         {game.favorite ? (
-          <FavoriteRounded color="secondary" fontSize="small" />
+          <FavoriteRounded color="primary" fontSize="small" />
         ) : (
           <FavoriteBorderRounded fontSize="small" />
         )}

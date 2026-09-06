@@ -1,19 +1,15 @@
 "use client";
-
-import AutoAwesomeRounded from "@mui/icons-material/AutoAwesomeRounded";
-import BarChartRounded from "@mui/icons-material/BarChartRounded";
-import CollectionsBookmarkRounded from "@mui/icons-material/CollectionsBookmarkRounded";
-import DashboardRounded from "@mui/icons-material/DashboardRounded";
-import GridViewRounded from "@mui/icons-material/GridViewRounded";
-import MenuBookRounded from "@mui/icons-material/MenuBookRounded";
-import SearchRounded from "@mui/icons-material/SearchRounded";
-import SettingsRounded from "@mui/icons-material/SettingsRounded";
-import ViewTimelineRounded from "@mui/icons-material/ViewTimelineRounded";
+import { useState, type PropsWithChildren, type ReactNode } from "react";
 import {
   AppBar,
+  Avatar,
   Box,
   BottomNavigation,
   BottomNavigationAction,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   IconButton,
   InputBase,
   List,
@@ -25,8 +21,21 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
-import type { PropsWithChildren, ReactNode } from "react";
-
+import {
+  AddRounded,
+  AutoAwesomeRounded,
+  BarChartRounded,
+  CollectionsBookmarkRounded,
+  DashboardRounded,
+  GridViewRounded,
+  MenuBookRounded,
+  MoreHorizRounded,
+  SearchRounded,
+  SettingsRounded,
+  ViewTimelineRounded,
+  CloseRounded,
+} from "@mui/icons-material";
+import { glass } from "@/theme/gamdow-theme";
 export type AppPage =
   | "dashboard"
   | "library"
@@ -36,14 +45,13 @@ export type AppPage =
   | "gallery"
   | "statistics"
   | "settings";
-
-const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
-  { page: "dashboard", label: "Dashboard", icon: <DashboardRounded /> },
+export const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
+  { page: "dashboard", label: "Home", icon: <DashboardRounded /> },
   { page: "library", label: "Library", icon: <GridViewRounded /> },
   { page: "planner", label: "Planner", icon: <ViewTimelineRounded /> },
   {
     page: "collections",
-    label: "Collections",
+    label: "Browse",
     icon: <CollectionsBookmarkRounded />,
   },
   { page: "reviews", label: "Reviews", icon: <MenuBookRounded /> },
@@ -51,134 +59,242 @@ const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
   { page: "statistics", label: "Statistics", icon: <BarChartRounded /> },
   { page: "settings", label: "Settings", icon: <SettingsRounded /> },
 ];
-
-type AppShellProps = PropsWithChildren<{
+type Props = PropsWithChildren<{
   page: AppPage;
   onPageChange: (page: AppPage) => void;
+  search: string;
+  onSearch: (value: string) => void;
+  onAdd: () => void;
+  name: string;
 }>;
-
-export function AppShell({ children, page, onPageChange }: AppShellProps) {
+export function AppShell({
+  children,
+  page,
+  onPageChange,
+  search,
+  onSearch,
+  onAdd,
+  name,
+}: Props) {
+  const [more, setMore] = useState(false);
+  const go = (next: AppPage) => {
+    onPageChange(next);
+    setMore(false);
+  };
   return (
-    <Box sx={{ minHeight: "100vh", pb: { xs: 8, md: 0 } }}>
+    <Box
+      sx={{
+        minHeight: "100dvh",
+        p: { xs: 1.25, md: 2 },
+        pb: { xs: "calc(106px + env(safe-area-inset-bottom))", md: 2 },
+      }}
+    >
       <AppBar
-        elevation={0}
         position="sticky"
-        color="transparent"
+        elevation={0}
         sx={{
-          borderBottom: 1,
-          borderColor: "divider",
-          backdropFilter: "blur(18px)",
+          ...glass,
+          top: { xs: 10, md: 16 },
+          borderRadius: 4,
+          zIndex: 1100,
         }}
       >
-        <Toolbar sx={{ gap: 2 }}>
-          <Stack
-            direction="row"
-            spacing={1.1}
-            sx={{ minWidth: { md: 230 }, alignItems: "center" }}
+        <Toolbar sx={{ gap: { xs: 1, md: 3 }, px: { xs: 1.5, md: 2.5 } }}>
+          <Button
+            onClick={() => go("dashboard")}
+            sx={{
+              minWidth: { md: 186 },
+              justifyContent: "flex-start",
+              color: "text.primary",
+              p: 0,
+            }}
+            aria-label="gamdow home"
           >
             <Box
               sx={{
-                width: 31,
-                height: 31,
-                borderRadius: 2,
+                width: 34,
+                height: 34,
+                mr: 1,
+                borderRadius: 2.5,
                 display: "grid",
                 placeItems: "center",
                 bgcolor: "primary.main",
                 color: "primary.contrastText",
+                fontSize: 25,
                 fontWeight: 900,
               }}
             >
               g
             </Box>
             <Typography
-              variant="h6"
-              sx={{ fontWeight: "900", letterSpacing: "-0.7" }}
+              sx={{
+                display: { xs: "none", sm: "block" },
+                fontWeight: 850,
+                fontSize: 23,
+                letterSpacing: "-.06em",
+              }}
             >
               gamdow
             </Typography>
-          </Stack>
-          <Paper
-            variant="outlined"
+          </Button>
+          <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              px: 1.2,
-              width: "min(480px, 100%)",
-              borderRadius: 2,
-              bgcolor: "background.default",
+              px: 1.4,
+              py: 0.3,
+              width: { xs: "100%", md: "min(520px, 50%)" },
+              border: 1,
+              borderColor: "divider",
+              bgcolor: "rgba(0,0,0,.12)",
+              borderRadius: 3,
             }}
           >
-            <SearchRounded color="action" fontSize="small" />
+            <SearchRounded fontSize="small" color="action" />
             <InputBase
-              placeholder="Search your collection…"
-              sx={{ ml: 1, flex: 1, fontSize: 14 }}
+              inputProps={{ "aria-label": "Search all games" }}
+              value={search}
+              onChange={(e) => onSearch(e.target.value)}
+              placeholder="Find your next story…"
+              sx={{ ml: 1, flex: 1, minWidth: 0, fontSize: 14 }}
             />
-            <Typography variant="caption" color="text.secondary">
-              ⌘ K
-            </Typography>
-          </Paper>
-          <Box sx={{ flex: 1 }} />
-          <IconButton sx={{ bgcolor: "background.paper" }}>MR</IconButton>
+            {search && (
+              <IconButton
+                size="small"
+                aria-label="Clear search"
+                onClick={() => onSearch("")}
+              >
+                <CloseRounded fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+          <Box sx={{ flex: 1, display: { xs: "none", md: "block" } }} />
+          <Button
+            variant="contained"
+            startIcon={<AddRounded />}
+            onClick={onAdd}
+            sx={{ display: { xs: "none", md: "flex" }, whiteSpace: "nowrap" }}
+          >
+            Add game
+          </Button>
+          <IconButton
+            aria-label="Profile settings"
+            onClick={() => go("settings")}
+          >
+            <Avatar
+              sx={{
+                width: 33,
+                height: 33,
+                fontSize: 13,
+                bgcolor: "rgba(166,219,212,.15)",
+                color: "secondary.main",
+              }}
+            >
+              {name.slice(0, 2).toUpperCase()}
+            </Avatar>
+          </IconButton>
         </Toolbar>
       </AppBar>
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { md: "252px minmax(0,1fr)" },
-          maxWidth: 1520,
-          mx: "auto",
+          gridTemplateColumns: { md: "210px minmax(0,1fr)" },
+          gap: { md: 3, xl: 4 },
+          width: "100%",
+          mt: { xs: 3, md: 3 },
         }}
       >
-        <Box
+        <Paper
           component="aside"
           sx={{
-            display: { xs: "none", md: "block" },
+            display: { xs: "none", md: "flex" },
+            flexDirection: "column",
             position: "sticky",
-            top: 65,
-            height: "calc(100vh - 65px)",
-            borderRight: 1,
-            borderColor: "divider",
-            p: 1.5,
+            top: 104,
+            height: "calc(100dvh - 125px)",
+            p: 1.25,
+            borderRadius: 4,
           }}
         >
+          <Typography
+            variant="overline"
+            color="text.secondary"
+            sx={{ px: 1.5, py: 1 }}
+          >
+            YOUR PLAY SPACE
+          </Typography>
           <List disablePadding>
             {navigation.map((item) => (
               <ListItemButton
                 key={item.page}
                 selected={page === item.page}
-                onClick={() => onPageChange(item.page)}
-                sx={{ borderRadius: 2, mb: 0.5 }}
+                onClick={() => go(item.page)}
+                sx={{
+                  borderRadius: 2.5,
+                  mb: 0.75,
+                  "&.Mui-selected": {
+                    bgcolor: "rgba(212,247,125,.12)",
+                    color: "primary.main",
+                  },
+                }}
               >
-                <ListItemIcon sx={{ minWidth: 38 }}>{item.icon}</ListItemIcon>
+                <ListItemIcon sx={{ minWidth: 35, color: "inherit" }}>
+                  {item.icon}
+                </ListItemIcon>
                 <ListItemText
                   primary={item.label}
-                  sx={{ fontWeight: 700, fontSize: 14 }}
+                  slotProps={{
+                    primary: { sx: { fontSize: 14, fontWeight: 600 } },
+                  }}
                 />
               </ListItemButton>
             ))}
           </List>
-        </Box>
-        <Box component="main" sx={{ p: { xs: 2, sm: 3, lg: 4 }, minWidth: 0 }}>
+          <Box sx={{ mt: "auto", p: 1.5 }}>
+            <Typography variant="body2" color="primary.main">
+              Every game, a story.
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Make this space yours.
+            </Typography>
+          </Box>
+        </Paper>
+        <Box
+          component="main"
+          sx={{ minWidth: 0, px: { xs: 0.5, md: 0 }, pr: { md: 1 }, pb: 3 }}
+        >
           {children}
         </Box>
       </Box>
       <Paper
+        component="nav"
+        aria-label="Mobile navigation"
         sx={{
+          ...glass,
           display: { xs: "block", md: "none" },
           position: "fixed",
-          zIndex: 10,
-          bottom: 0,
-          left: 0,
-          right: 0,
-          borderRadius: 0,
+          zIndex: 1200,
+          bottom: "calc(14px + env(safe-area-inset-bottom))",
+          left: 16,
+          right: 16,
+          mx: "auto",
+          maxWidth: 480,
+          p: 0.75,
+          borderRadius: 5,
+          bgcolor: "rgba(18,31,32,.9)",
+          boxShadow: "0 18px 60px #0009, inset 0 1px 0 #ffffff1a",
         }}
-        elevation={8}
       >
         <BottomNavigation
-          value={page}
-          onChange={(_, value) => onPageChange(value)}
+          showLabels
+          value={
+            ["dashboard", "library", "planner"].includes(page) ? page : "more"
+          }
+          onChange={(_, v) =>
+            v === "more" ? setMore(true) : v === "add" ? onAdd() : go(v)
+          }
         >
-          {navigation.slice(0, 5).map((item) => (
+          {navigation.slice(0, 3).map((item) => (
             <BottomNavigationAction
               key={item.page}
               value={item.page}
@@ -186,8 +302,49 @@ export function AppShell({ children, page, onPageChange }: AppShellProps) {
               icon={item.icon}
             />
           ))}
+          <BottomNavigationAction
+            value="add"
+            label="Add game"
+            icon={<AddRounded />}
+          />
+          <BottomNavigationAction
+            value="more"
+            label="More"
+            icon={<MoreHorizRounded />}
+          />
         </BottomNavigation>
       </Paper>
+      <Dialog
+        open={more}
+        onClose={() => setMore(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>
+          Explore gamdow
+          <IconButton
+            aria-label="Close menu"
+            onClick={() => setMore(false)}
+            sx={{ float: "right" }}
+          >
+            <CloseRounded />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <List>
+            {navigation.slice(3).map((item) => (
+              <ListItemButton
+                key={item.page}
+                onClick={() => go(item.page)}
+                selected={page === item.page}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            ))}
+          </List>
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
