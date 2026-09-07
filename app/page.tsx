@@ -1,5 +1,16 @@
+import { redirect } from "next/navigation";
 import { GamdowApp } from "@/features/gamdow/gamdow-app";
-
-export default function HomePage() {
-  return <GamdowApp />;
+import { currentSession } from "@/server/session";
+export const dynamic = "force-dynamic";
+export default async function HomePage() {
+  const session = await currentSession();
+  if (!session) redirect("/login");
+  return (
+    <GamdowApp
+      initial={{
+        snapshot: session.account.snapshot,
+        revision: session.account.revision,
+      }}
+    />
+  );
 }

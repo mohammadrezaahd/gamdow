@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Box, FormControlLabel, Stack, Typography } from "@mui/material";
+import { Alert, Box, FormControlLabel, Stack, Typography } from "@mui/material";
 import { ArrowForwardRounded } from "@mui/icons-material";
 import { Button, Checkbox, TextField } from "@/components/ui";
 import { PasswordField } from "@/components/ui/password-field";
+import { authRepository } from "@/services/auth-repository";
 import type { LoginInput, RegisterFormValues } from "@/types/auth";
 export interface AuthFormProps {
   mode: "login" | "register";
@@ -14,6 +15,8 @@ interface AuthFormValues extends RegisterFormValues {
 }
 export function AuthForm({ mode }: AuthFormProps) {
   const registering = mode === "register";
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [values, setValues] = useState<AuthFormValues>({
     displayName: "",
     email: "",
@@ -26,16 +29,46 @@ export function AuthForm({ mode }: AuthFormProps) {
     value: AuthFormValues[K],
   ) => setValues((current) => ({ ...current, [key]: value }));
   return (
-    // Intentionally inert: no API call, session, password persistence, or redirect.
     <Box
       component="form"
-      noValidate
-      onSubmit={(event) => event.preventDefault()}
-      aria-label={registering ? "Registration preview" : "Login preview"}
+      onSubmit={async (event) => {
+        event.preventDefault();
+        if (busy) return;
+        setError("");
+        if (registering && values.password !== values.confirmPassword) {
+          setError("Passwords do not match.");
+          return;
+        }
+        setBusy(true);
+        try {
+          if (registering)
+            await authRepository.register({
+              displayName: values.displayName,
+              email: values.email,
+              password: values.password,
+            });
+          else
+            await authRepository.login({
+              email: values.email,
+              password: values.password,
+              rememberMe: values.rememberMe,
+            });
+          window.location.replace("/");
+        } catch (error) {
+          setError(
+            error instanceof Error ? error.message : "Could not sign in.",
+          );
+          setBusy(false);
+        }
+      }}
+      aria-label={registering ? "Registration" : "Login"}
     >
       <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
         {registering && (
           <TextField
+            required
+            disabled={busy}
             label="Display name"
             name="displayName"
             autoComplete="nickname"
@@ -44,6 +77,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           />
         )}
         <TextField
+          required
+          disabled={busy}
           label="Email address"
           name="email"
           type="email"
@@ -52,6 +87,9 @@ export function AuthForm({ mode }: AuthFormProps) {
           onChange={(e) => field("email", e.target.value)}
         />
         <PasswordField
+          required
+          disabled={busy}
+          helperText={registering ? "Use at least 12 characters." : undefined}
           name="password"
           autoComplete={registering ? "new-password" : "current-password"}
           value={values.password}
@@ -59,6 +97,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         />
         {registering && (
           <PasswordField
+            required
+            disabled={busy}
             label="Confirm password"
             name="confirmPassword"
             autoComplete="new-password"
@@ -78,20 +118,14 @@ export function AuthForm({ mode }: AuthFormProps) {
           />
         )}
         <Button
+          disabled={busy}
           type="submit"
           variant="contained"
           endIcon={<ArrowForwardRounded />}
           size="large"
         >
-          {registering ? "Create account" : "Log in"}
+          {busy ? "Please wait…" : registering ? "Create account" : "Log in"}
         </Button>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          id="auth-preview-note"
-        >
-          Design preview — these forms do not create an account or sign you in.
-        </Typography>
         <Stack
           direction="row"
           useFlexGap

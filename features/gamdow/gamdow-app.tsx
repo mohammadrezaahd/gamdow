@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { LinearProgress } from "@mui/material";
 import { AppShell, navigation, type AppPage } from "@/components/app-shell";
+import type { LibraryResponse } from "@/types/api";
 import type { Game } from "@/types/game";
 import { LibraryProvider, useLibrary } from "./library-context";
 import { GameForm } from "./forms/game-form";
@@ -149,9 +150,9 @@ function AppContent() {
     </AppShell>
   );
 }
-export function GamdowApp() {
+export function GamdowApp({ initial }: { initial: LibraryResponse }) {
   return (
-    <LibraryProvider>
+    <LibraryProvider initial={initial}>
       <AppContent />
     </LibraryProvider>
   );

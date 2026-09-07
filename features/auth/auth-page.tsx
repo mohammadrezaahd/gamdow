@@ -3,8 +3,7 @@ import Link from "next/link";
 import { Box, Paper, Stack, Typography } from "@mui/material";
 import { ArrowBackRounded } from "@mui/icons-material";
 import { Button, Chip } from "@/components/ui";
-import { GameImage } from "@/components/game-image";
-import { fakeGames } from "@/data/fake-data";
+
 import { archiveTokens as t } from "@/theme/gamdow-theme";
 import { AuthForm, type AuthFormProps } from "./auth-form";
 export function AuthPage({ mode }: AuthFormProps) {
@@ -84,9 +83,9 @@ export function AuthPage({ mode }: AuthFormProps) {
               display: { xs: "none", md: "block" },
             }}
           >
-            {fakeGames.slice(0, 3).map((game, index) => (
+            {["COLLECT", "PLAY", "REMEMBER"].map((label, index) => (
               <Box
-                key={game.id}
+                key={label}
                 sx={{
                   position: "absolute",
                   width: "32%",
@@ -101,11 +100,31 @@ export function AuthPage({ mode }: AuthFormProps) {
                   overflow: "hidden",
                 }}
               >
-                <GameImage
-                  src={game.coverImage}
-                  alt=""
-                  sx={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
+                <Box
+                  sx={{
+                    height: "100%",
+                    p: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    background: `linear-gradient(${45 + index * 70}deg, #111311, #35462b)`,
+                  }}
+                >
+                  <Typography color="primary.main" variant="overline">
+                    0{index + 1} / GAM DOW
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontFamily: t.display,
+                      fontWeight: 700,
+                      color: "primary.main",
+                      fontSize: 28,
+                      writingMode: "vertical-rl",
+                    }}
+                  >
+                    {label}
+                  </Typography>
+                </Box>
               </Box>
             ))}
           </Box>

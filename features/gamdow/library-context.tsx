@@ -5,15 +5,12 @@ import { Button } from "@/components/ui";
 import {
   createContext,
   useContext,
-  useEffect,
   useState,
   type PropsWithChildren,
 } from "react";
-import { Alert, Snackbar } from "@mui/material";
-import {
-  initialLibrary,
-  libraryRepository,
-} from "@/services/library-repository";
+import { Alert, Snackbar, Stack, Typography } from "@mui/material";
+import type { LibraryResponse } from "@/types/api";
+import { useCloudLibrary } from "./use-cloud-library";
 import type {
   Game,
   GameCollection,
@@ -38,6 +35,7 @@ interface LibraryContextValue {
   deleteCategory: (kind: TaxonomyKind, id: string) => void;
   saveProfile: (input: ProfileInput) => void;
   ready: boolean;
+  hasUnsavedChanges: boolean;
   notify: (message: string) => void;
   reorderGames: (games: Game[]) => void;
   saveGame: (game: Game) => void;
@@ -54,47 +52,18 @@ const upsert = <T extends { id: string }>(items: T[], value: T): T[] =>
   items.some((i) => i.id === value.id)
     ? items.map((i) => (i.id === value.id ? value : i))
     : [value, ...items];
-export function LibraryProvider({ children }: PropsWithChildren) {
-  const [data, setData] = useState(initialLibrary);
-  const [ready, setReady] = useState(false);
-  const [storageEnabled, setStorageEnabled] = useState(true);
-  const [error, setError] = useState("");
+export function LibraryProvider({
+  children,
+  initial,
+}: PropsWithChildren<{ initial: LibraryResponse }>) {
+  const { data, setData, dirty, status, error, code, retry } =
+    useCloudLibrary(initial);
+  const ready = true;
   const [message, notify] = useState("");
-  useEffect(() => {
-    let active = true;
-    libraryRepository
-      .load()
-      .then((value) => {
-        if (active) setData(value);
-      })
-      .catch(() => {
-        if (active) {
-          setStorageEnabled(false);
-          setError(
-            "Saved data could not be opened. Your existing storage is preserved; changes are temporary. Export a backup before leaving.",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setReady(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  useEffect(() => {
-    if (!ready || !storageEnabled) return;
-    libraryRepository
-      .save(data)
-      .catch(() =>
-        setError(
-          "The archive could not be saved on this device. Check available storage and export a backup in Settings.",
-        ),
-      );
-  }, [data, ready, storageEnabled]);
   const value: LibraryContextValue = {
     data,
     ready,
+    hasUnsavedChanges: dirty,
     saveProfile: (input) => {
       const displayName = input.displayName.trim();
       if (!displayName) throw new Error("A display name is required.");
@@ -117,7 +86,7 @@ export function LibraryProvider({ children }: PropsWithChildren) {
     notify,
     saveCategory: (mutation) => {
       setData(saveTaxonomy(data, mutation, newId(), new Date().toISOString()));
-      notify("Category saved");
+      notify("Category updated");
     },
     deleteCategory: (kind, id) => {
       setData((current) => deleteTaxonomy(current, kind, id));
@@ -138,7 +107,7 @@ export function LibraryProvider({ children }: PropsWithChildren) {
           }),
         }),
       );
-      notify("Game saved");
+      notify("Game updated");
     },
     deleteGame: (id) => {
       setData((d) => ({
@@ -183,27 +152,77 @@ export function LibraryProvider({ children }: PropsWithChildren) {
         preferences,
         profile: { ...d.profile, displayName: preferences.displayName },
       }));
-      notify("Preferences saved");
+      notify("Preferences updated");
     },
     replace: (snapshot) => {
-      setData(snapshot);
-      setStorageEnabled(true);
-      setError("");
+      setData({
+        ...snapshot,
+        profile: {
+          ...snapshot.profile,
+          id: data.profile.id,
+          createdAt: data.profile.createdAt,
+        },
+      });
+
       notify("Backup restored");
     },
   };
   return (
     <Context.Provider value={value}>
+      <Stack
+        role="status"
+        direction="row"
+        sx={{ px: 3, py: 1, justifyContent: "flex-end" }}
+      >
+        <Typography
+          variant="caption"
+          color={error ? "error.main" : "text.secondary"}
+        >
+          {status === "saved"
+            ? "All changes saved"
+            : status === "saving"
+              ? "Saving changes…"
+              : "Changes not saved"}
+        </Typography>
+      </Stack>
       {error && (
         <Alert
-          severity="warning"
+          severity="error"
           action={
-            <Button color="inherit" onClick={() => setError("")}>
-              Dismiss
-            </Button>
+            <Stack direction="row" spacing={1}>
+              {code !== "REVISION_CONFLICT" && code !== "ACCOUNT_CHANGED" && (
+                <Button color="inherit" onClick={retry}>
+                  Retry
+                </Button>
+              )}
+              {code === "UNAUTHENTICATED" && (
+                <Button
+                  component="a"
+                  href="/login"
+                  target="_blank"
+                  rel="noopener"
+                  color="inherit"
+                >
+                  Log in
+                </Button>
+              )}
+              <Button
+                color="inherit"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Reload the server version? Pending changes will be lost. Export them in Settings first.",
+                    )
+                  )
+                    window.location.reload();
+                }}
+              >
+                Reload
+              </Button>
+            </Stack>
           }
         >
-          {error}
+          {error} Pending changes can be exported in Settings.
         </Alert>
       )}
       {children}

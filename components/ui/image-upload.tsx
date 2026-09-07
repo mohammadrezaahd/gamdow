@@ -1,4 +1,5 @@
 "use client";
+import { uploadImage } from "@/services/media-repository";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -125,7 +126,9 @@ export function ImageUpload({
     setBusy(true);
     setError("");
     try {
-      const image = await cropImage(current.src, pixels, preset, current.name);
+      const image = await uploadImage(
+        await cropImage(current.src, pixels, preset, current.name),
+      );
       if (!alive.current || run !== session.current) return;
       output.current.push(image);
       if (index < queue.length - 1) {
@@ -200,7 +203,8 @@ export function ImageUpload({
               >
                 Replace
               </Button>
-              {value.startsWith("data:") && (
+              {(value.startsWith("data:") ||
+                value.startsWith("/api/media/")) && (
                 <Button
                   size="small"
                   startIcon={<CropRounded />}

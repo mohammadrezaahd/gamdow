@@ -1,229 +1,26 @@
-import { normalizeTags } from "@/lib/tags";
-import { fakeProfile } from "@/data/fake-profile";
-import { normalizeTaxonomies, taxonomyKey } from "@/lib/taxonomy";
-import { readSnapshot, writeSnapshot } from "./browser-store";
-import {
-  fakeCollections,
-  fakeGalleryItems,
-  fakeGames,
-  fakePreferences,
-} from "@/data/fake-data";
-import type { LibraryRepository, LibrarySnapshot } from "@/types/game";
-export const statuses = [
-  "Not started",
-  "Playing",
-  "On hold",
-  "Completed",
-  "Dropped",
-] as const;
-export const plans = [
-  "None",
-  "Up next",
-  "Soon",
-  "Someday",
-  "Not interested",
-] as const;
-export const initialLibrary: LibrarySnapshot = normalizeTaxonomies({
-  version: 1,
-  profile: fakeProfile,
-  games: fakeGames,
-  collections: fakeCollections,
-  gallery: fakeGalleryItems,
-  preferences: fakePreferences,
-});
-const key = "gamdow.library.v1";
-const record = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
-const strings = (v: unknown): v is string[] =>
-  Array.isArray(v) && v.every((x) => typeof x === "string");
-const optionalString = (v: unknown) => v === undefined || typeof v === "string";
-const number = (v: unknown, min: number, max = Infinity) =>
-  v === undefined ||
-  (typeof v === "number" && Number.isFinite(v) && v >= min && v <= max);
-export function parseLibrary(value: unknown): LibrarySnapshot {
-  if (
-    !record(value) ||
-    value.version !== 1 ||
-    !Array.isArray(value.games) ||
-    !Array.isArray(value.collections) ||
-    !Array.isArray(value.gallery) ||
-    !record(value.preferences)
-  )
-    throw new Error("Choose a valid gamdow backup (version 1).");
-  const ids = new Set<string>();
-  for (const g of value.games) {
-    if (
-      !record(g) ||
-      typeof g.id !== "string" ||
-      ids.has(g.id) ||
-      typeof g.title !== "string" ||
-      !g.title.trim() ||
-      !strings(g.genres) ||
-      (g.tags !== undefined && !strings(g.tags)) ||
-      typeof g.platform !== "string" ||
-      !statuses.includes(g.status as never) ||
-      !plans.includes(g.plan as never) ||
-      typeof g.favorite !== "boolean" ||
-      typeof g.description !== "string" ||
-      typeof g.coverImage !== "string" ||
-      typeof g.updatedAt !== "string" ||
-      !number(g.rating, 0, 10) ||
-      !number(g.hoursPlayed, 0) ||
-      !number(g.releaseYear, 1950, 2200) ||
-      !number(g.planOrder, 0) ||
-      !Array.isArray(g.journalEntries) ||
-      !g.journalEntries.every(
-        (j) =>
-          record(j) &&
-          typeof j.id === "string" &&
-          typeof j.date === "string" &&
-          typeof j.text === "string",
-      )
-    )
-      throw new Error("The backup contains invalid game data.");
-    for (const field of [
-      "series",
-      "heroImage",
-      "review",
-      "reviewPros",
-      "reviewCons",
-      "startedAt",
-      "completedAt",
-      "plannedAt",
-      "planNote",
-    ])
-      if (!optionalString(g[field]))
-        throw new Error("Invalid game field in backup.");
-    if (
-      g.scoreBreakdown !== undefined &&
-      (!record(g.scoreBreakdown) ||
-        !Object.values(g.scoreBreakdown).every((v) => number(v, 0, 10)))
-    )
-      throw new Error("Invalid review scores.");
-    if (g.reviewSpoiler !== undefined && typeof g.reviewSpoiler !== "boolean")
-      throw new Error("Invalid spoiler flag.");
-    if (
-      g.edition !== undefined &&
-      !["Main game", "DLC", "Remake", "Remaster"].includes(g.edition as string)
-    )
-      throw new Error("Invalid edition.");
-    ids.add(g.id);
-  }
-  const unique = (items: unknown[]) => {
-    const seen = new Set();
-    return items.every((i) => {
-      if (!record(i) || typeof i.id !== "string" || seen.has(i.id))
-        return false;
-      seen.add(i.id);
-      return true;
+import type {
+  LibraryResponse,
+  SaveLibraryInput,
+  SaveLibraryResponse,
+} from "@/types/api";
+import { apiRequest, ApiError } from "./http-client";
+export { parseLibrary, statuses, plans } from "@/lib/library-schema";
+export const libraryRepository = {
+  load: () => apiRequest<LibraryResponse>("/api/library"),
+  save: (input: SaveLibraryInput) => {
+    const body = JSON.stringify(input);
+    if (new TextEncoder().encode(body).length > 3 * 1024 * 1024)
+      return Promise.reject(
+        new ApiError(
+          413,
+          "This archive exceeds the 3 MB metadata limit. Export a backup and reduce long text entries before saving.",
+          "PAYLOAD_TOO_LARGE",
+        ),
+      );
+    return apiRequest<SaveLibraryResponse>("/api/library", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body,
     });
-  };
-  if (
-    !unique(value.collections) ||
-    !value.collections.every(
-      (c) =>
-        record(c) &&
-        typeof c.name === "string" &&
-        typeof c.description === "string" &&
-        strings(c.gameIds) &&
-        c.gameIds.every((id) => ids.has(id)),
-    )
-  )
-    throw new Error("Invalid collections in backup.");
-  if (
-    !unique(value.gallery) ||
-    !value.gallery.every(
-      (p) =>
-        record(p) &&
-        typeof p.gameId === "string" &&
-        ids.has(p.gameId) &&
-        typeof p.image === "string" &&
-        typeof p.caption === "string" &&
-        typeof p.capturedAt === "string" &&
-        typeof p.favorite === "boolean" &&
-        typeof p.spoiler === "boolean",
-    )
-  )
-    throw new Error("Invalid gallery in backup.");
-  const p = value.preferences;
-  if (
-    typeof p.displayName !== "string" ||
-    !["grid", "list"].includes(p.defaultLibraryView as string) ||
-    typeof p.hideSpoilers !== "boolean"
-  )
-    throw new Error("Invalid preferences in backup.");
-  for (const [field, kind] of [
-    ["genres", "genre"],
-    ["series", "series"],
-  ] as const) {
-    const entries = value[field];
-    if (entries === undefined) continue; // Older v1 backups did not have registries.
-    if (!Array.isArray(entries) || !unique(entries))
-      throw new Error("Invalid category registry.");
-    const names = new Set<string>();
-    for (const entry of entries) {
-      if (
-        !record(entry) ||
-        entry.kind !== kind ||
-        typeof entry.name !== "string" ||
-        !entry.name.trim() ||
-        typeof entry.description !== "string" ||
-        typeof entry.createdAt !== "string" ||
-        typeof entry.updatedAt !== "string" ||
-        names.has(taxonomyKey(entry.name))
-      )
-        throw new Error("Invalid or duplicate category in backup.");
-      names.add(taxonomyKey(entry.name));
-    }
-  }
-  const profile = value.profile;
-  if (
-    profile !== undefined &&
-    (!record(profile) ||
-      ![
-        "id",
-        "displayName",
-        "username",
-        "bio",
-        "location",
-        "avatarImage",
-        "createdAt",
-        "updatedAt",
-      ].every((field) => typeof profile[field] === "string") ||
-      !String(profile.displayName).trim() ||
-      !strings(profile.favoritePlatforms))
-  )
-    throw new Error("Invalid profile in backup.");
-  const snapshot = value as unknown as LibrarySnapshot;
-  const migratedProfile = snapshot.profile ?? {
-    ...fakeProfile,
-    displayName: snapshot.preferences.displayName,
-  };
-  return normalizeTaxonomies({
-    ...snapshot,
-    profile: migratedProfile,
-    preferences: {
-      ...snapshot.preferences,
-      displayName: migratedProfile.displayName,
-    },
-    games: snapshot.games.map((game) => ({
-      ...game,
-      tags: normalizeTags(game.tags ?? []),
-    })),
-  });
-}
-// Replace this adapter with an HTTP repository when the API is available.
-export const libraryRepository: LibraryRepository = {
-  async load() {
-    const snapshot = await readSnapshot();
-    if (snapshot !== undefined) return parseLibrary(snapshot);
-    // Migrate an existing v1 localStorage archive without deleting its backup.
-    const saved = localStorage.getItem(key);
-    return saved
-      ? parseLibrary(JSON.parse(saved))
-      : structuredClone(initialLibrary);
-  },
-  async save(snapshot) {
-    await writeSnapshot(snapshot);
   },
 };

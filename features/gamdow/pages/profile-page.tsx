@@ -1,15 +1,17 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
-import { Avatar, Box, Paper, Stack, Typography } from "@mui/material";
-import { EditRounded, NorthEastRounded } from "@mui/icons-material";
+import { authRepository } from "@/services/auth-repository";
+import { Alert, Avatar, Box, Paper, Stack, Typography } from "@mui/material";
+import { EditRounded } from "@mui/icons-material";
 import { Button, Chip } from "@/components/ui";
 import { Metric, SectionTitle } from "@/components/page-parts";
 import { archiveTokens as t } from "@/theme/gamdow-theme";
 import { useLibrary } from "../library-context";
 import { ProfileForm } from "../forms/profile-form";
 export function ProfilePage() {
-  const { data } = useLibrary();
+  const { data, hasUnsavedChanges } = useLibrary();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [error, setError] = useState("");
   const { profile } = data;
   const [editing, setEditing] = useState(false);
   return (
@@ -139,25 +141,35 @@ export function ProfilePage() {
           <Box>
             <Typography variant="h5">Account</Typography>
             <Typography color="text.secondary" variant="body2" sx={{ mt: 1 }}>
-              Explore the sign-in and registration screens. Your archive stays
-              open.
+              Your collection is private and saved to your account.
             </Typography>
           </Box>
-          <Stack direction="row" spacing={1}>
-            <Button
-              component={Link}
-              href="/login"
-              variant="outlined"
-              endIcon={<NorthEastRounded />}
-            >
-              Log in
-            </Button>
-            <Button component={Link} href="/register">
-              Register
-            </Button>
-          </Stack>
+          <Button
+            variant="outlined"
+            disabled={loggingOut || hasUnsavedChanges}
+            onClick={async () => {
+              setLoggingOut(true);
+              setError("");
+              try {
+                await authRepository.logout();
+                window.location.replace("/login");
+              } catch (error) {
+                setError(
+                  error instanceof Error ? error.message : "Could not log out.",
+                );
+                setLoggingOut(false);
+              }
+            }}
+          >
+            {loggingOut
+              ? "Logging out…"
+              : hasUnsavedChanges
+                ? "Saving before logout…"
+                : "Log out"}
+          </Button>
         </Stack>
       </Paper>
+      {error && <Alert severity="error">{error}</Alert>}
       {editing && <ProfileForm onClose={() => setEditing(false)} />}
     </>
   );

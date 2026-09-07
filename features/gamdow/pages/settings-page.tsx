@@ -100,8 +100,9 @@ export function SettingsPage({ onProfile }: { onProfile: () => void }) {
           <Stack spacing={2}>
             <Typography variant="h5">Your data</Typography>
             <Typography color="text.secondary">
-              Your library is saved in this browser. Export a backup to keep a
-              copy or move it to another device.
+              Your library is saved to your account. Export a metadata backup to
+              keep a copy. Image files stay in storage and are referenced by
+              this backup.
             </Typography>
             <Button variant="outlined" onClick={download}>
               Export backup
@@ -118,8 +119,8 @@ export function SettingsPage({ onProfile }: { onProfile: () => void }) {
                   if (!file) return;
                   setError("");
                   try {
-                    if (file.size > 100 * 1024 * 1024)
-                      throw new Error("Choose a backup smaller than 100 MB.");
+                    if (file.size > 3 * 1024 * 1024)
+                      throw new Error("Choose a backup smaller than 3 MB.");
                     setRestore(parseLibrary(JSON.parse(await file.text())));
                   } catch (error) {
                     setError(

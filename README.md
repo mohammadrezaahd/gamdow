@@ -1,78 +1,54 @@
-# gamdow
+# gamdow — server branch
 
-A personal game library, planner, gallery and review journal built with Next.js, TypeScript and MUI.
+Personal game archive built with Next.js App Router, TypeScript, MUI, MongoDB and private Vercel Blob. Functional components and the existing dark theme are preserved. New accounts start empty; there is no seeded user, fake game data or browser database.
 
-## Run
+## Run locally
 
-```bash
+Requires Node.js 22 or 24 and MongoDB Community Server (or an Atlas connection). MongoDB Compass is a viewer; it does not run the database server.
+
+```sh
 npm ci
+```
+
+Copy `.env.local.example` to `.env.local`, then:
+
+```sh
 npm run dev
 ```
 
-Open http://localhost:3000. For a production build:
+If you use Docker instead of a locally installed MongoDB service:
 
-```bash
-npm run build
-npm start
+```sh
+docker compose up -d
 ```
 
-## Structure
+Open `http://localhost:3000`, register your own account, and add a game. In Compass connect to `mongodb://127.0.0.1:27017` and open `gamdow_local`. Uploaded images are in `.data/uploads`; their metadata and ownership are in MongoDB. Both the database volume and this folder must be backed up.
 
-- `app/` — Next.js entry point and MUI provider
-- `theme/gamdow-theme.ts` — archive palette, typography, glass surfaces and component defaults
-- `components/` — responsive shell, image fallback, cards, grids and shared dialogs
-- `components/ui/` — shared fields, dropdowns, autocomplete, calendar, switches, sliders, buttons, crop upload and sortable board
-- `lib/` — fixed crop presets/image processing and pure ordering operations
-- `features/gamdow/pages/` — dashboard, library, planner, browse, reviews, gallery, statistics and settings
-- `features/gamdow/forms/` — typed game, review, collection and screenshot forms
-- `features/gamdow/game-detail.tsx` — overview, review, gallery and journal
-- `features/gamdow/library-context.tsx` — shared state and domain actions
-- `types/game.ts` — entities, game input and repository contracts
-- `data/fake-data.ts` — initial sample data
-- `services/library-repository.ts` — browser persistence adapter and backup validation
+## Vercel / GitHub
 
-## Current behavior
+Use branch **`server`**. `main` retains the frontend prototype. Read [the Persian setup guide](docs/SETUP.fa.md) before configuring Vercel. The standard Vercel build is `npm run build`, with Node.js 22.x or 24.x, and no static-export setting.
 
-The interface supports game creation/editing/removal, independent status and play plans, scores from 0–10, review category scores, spoiler controls, journal entries, multi-image uploads, gallery navigation, collection membership and order, genre/series browsing, library search/filter/sort and grid/list views, planner groups and order, profile preferences, and backup export/restore. Statistics use recorded values; missing ratings, hours and finish dates are not treated as zero.
+Create an Atlas database/user and a **private** Vercel Blob store. Add the values from `.env.prod.example` to Vercel Environment Variables. Real `.env.local` and `.env.prod` are ignored by Git. No real credentials are included.
 
-The visual identity uses an ink background, acid-green accents, numbered navigation, editorial typography and portrait covers. Desktop content uses the available width. Mobile has a floating bottom dock with safe-area spacing and a More menu for every remaining page. Glass styling is centralized, and motion respects reduced-motion preferences.
+Next.js does not automatically load `.env.prod`. For a local production-mode check, copy `.env.prod.example` to `.env.prod` and fill it in, using `APP_URL=http://localhost:3000` if testing through localhost, then run:
 
-Page selection, game links and library filters use query parameters and browser history, e.g. `/?page=library&status=Playing`. The existing single App Router entry point is retained; feature views can become independent routes later.
+```sh
+npm run build:prod
+npm run start:prod
+```
 
-## Connecting a backend
+These scripts use Node's `--env-file` support and work in Windows shells. Vercel uses its dashboard environment variables instead. See [environment reference](docs/SETUP.fa.md).
 
-The UI does not call browser storage directly. `LibraryRepository` exposes asynchronous `load` and `save` methods. The adapter stores a versioned `LibrarySnapshot` in IndexedDB (`gamdow-archive`). Existing `gamdow.library.v1` localStorage data is imported on first load; the legacy copy is preserved. Replace this adapter with an HTTP implementation for a snapshot API, or evolve the domain actions into resource endpoints (`games`, `collections`, `gallery`, `preferences`) without moving mutation logic into page components. `GameInput` excludes server-owned identity and timestamps.
+## Architecture
 
-Recommended resource semantics:
+- `app/api/`: small Node.js route handlers; `app/page.tsx` enforces login server-side.
+- `server/`: MongoDB connection pool/indexes, session/password handling, rate limits, media storage and bounded request parsing. Server-only modules cannot enter the client bundle.
+- `lib/library-schema.ts`: runtime validation and referential checks shared by backup import and the server.
+- `types/`: interfaces for domain data, API payloads and authentication.
+- `services/`: typed HTTP adapters. The client never receives a MongoDB or Blob credential.
+- `features/gamdow/use-cloud-library.ts`: serial, revisioned autosave with retry/idempotency, visible sync status and protection against overwriting another tab's changes.
+- `components/ui/`: shared controls, fixed-aspect crop/upload, tag input and drag-and-drop.
 
-- Deleting a game also removes its screenshots and collection memberships.
-- Status and planning remain independent fields.
-- A review belongs to a game; its overall score is independent of category scores.
-- Collection membership and planner order are explicit.
-- Backup restoration validates before replacing the current snapshot.
+All current UI actions persist through the authenticated library API: games, status/plan/reorder, reviews/scores, journal, gallery, collections, genres/series, tags, preferences and profile. Media uploads are separate binary requests; snapshots contain only owned media references.
 
-This is still a frontend with sample data, without an API, authentication or cross-device sync. New images use file upload only (JPEG/PNG/WebP, up to 20 MB each and 12 screenshots per batch). A shared cropper fixes covers to 2:3 (600×900), and banners/screenshots to 16:9 (1600×900). Users can reposition and zoom before saving a compressed JPEG. Legacy remote image references still render. For a backend, upload the cropped image to object storage and return stable URLs. Browser quota failures show an actionable warning; invalid existing storage is preserved. Export a backup before changing devices or clearing browser data.
-
-Planner and collection order use a shared drag-and-drop board with mouse, touch and keyboard sensors. Grab the grip, or use Space and arrow keys; Escape cancels. The planner supports drops into empty groups. Collection reordering is available in the unfiltered collection order view.
-
-The root layout includes both `AppRouterCacheProvider` (Next 16 entry point) and the application `Providers`; removing the latter would revert MUI to its default theme. Global CSS establishes a dark initial background before hydration.
-
-DM Sans and Space Grotesk are bundled locally with their SIL Open Font Licenses in `public/fonts/`.
-
-No test/spec files or test dependencies are included in the repository.
-
-## In-progress carousel and category management
-
-Overview displays the games with `Playing` status in a stacked-image carousel. Navigation supports buttons, direct indicators, keyboard arrows and horizontal touch swipes. It does not auto-advance. One game hides unnecessary controls; no active games shows a prompt to open the library.
-
-Manage genres and series from **Collections → Manage categories** or **Settings → Manage genres & series**. Create categories before assigning games, edit their descriptions, rename them or remove them. Renames preserve category IDs and update linked game display names; deleting a category removes its assignments without deleting games. Names are unique within each kind, ignoring case and surrounding whitespace.
-
-`types/taxonomy.ts` defines `Genre`, `GameSeries`, `TaxonomyInput`, `TaxonomyMutation` and the future resource-level `TaxonomyRepository` contract. `LibrarySnapshot` contains independent genre and series registries. `Game.genreIds` / `Game.seriesId` are populated links; `genres` / `series` retain display names for compatibility with the existing UI. The current mock adapter normalizes name-based input into registry IDs on save; a future resource API can accept IDs directly.
-
-Old v1 backups and stored archives are migrated by `normalizeTaxonomies` in `lib/taxonomy.ts`. Existing names become registry records, and empty categories remain saved. New categories are immediately available in game form autocomplete suggestions.
-
-### Tags, profile and account screens
-
-- `Game.tags: string[]` contains any number of free-text tags and alternate names (e.g. `Last of us`, `TLOU`). The shared `TagField` accepts Enter, suggestions and deletion, and commits pending text on blur. Empty/duplicate tags are normalized, preserving user spelling. Library/global search matches titles and tags through `lib/tags.ts`; a future search adapter can index the same field.
-- Profile is available from dashboard navigation, the header avatar, mobile More and Settings (`/?page=profile`). `types/profile.ts` defines `UserProfile`, `ProfileInput` and the future repository contract. Local edits include display name, handle, bio, location, platforms and a 512×512 cropped avatar. Profile data is included in the archive backup. Legacy v1 archives retain their display name and gain an empty tag list and profile automatically.
-- `/login` and `/register` are standalone App Router pages using the shared dark theme and controls. They are deliberately inert previews: submitting prevents the default form action and does not send a request, persist credentials, establish a session or redirect. The dashboard has no authentication checks. `types/auth.ts` defines login/register inputs, session and a future repository contract, without installing an authentication adapter.
+See [API and data model](docs/API.md) and [verification notes](docs/VERIFICATION.md). No test files or test dependencies are committed.

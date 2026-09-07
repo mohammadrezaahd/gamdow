@@ -16,7 +16,7 @@ export interface AuthSession {
   user: UserProfile;
   expiresAt: string;
 }
-// Future API contract only. No implementation or route guard is installed.
+// Implemented by services/auth-repository.ts. Sessions are held in HttpOnly cookies.
 export interface AuthRepository {
   login(input: LoginInput): Promise<AuthSession>;
   register(input: RegisterInput): Promise<AuthSession>;

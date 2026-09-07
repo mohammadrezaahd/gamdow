@@ -80,7 +80,3 @@ export interface LibrarySnapshot {
   profile: UserProfile;
 }
 export type GameInput = Omit<Game, "id" | "updatedAt">;
-export interface LibraryRepository {
-  load(): Promise<LibrarySnapshot>;
-  save(snapshot: LibrarySnapshot): Promise<void>;
-}
