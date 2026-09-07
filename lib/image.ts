@@ -17,6 +17,7 @@ export interface UploadedImage {
   mimeType: "image/jpeg";
 }
 export const imagePresets = {
+  avatar: { label: "Avatar · 1:1", width: 512, height: 512 },
   cover: { label: "Cover · 2:3", width: 600, height: 900 },
   banner: { label: "Banner · 16:9", width: 1600, height: 900 },
   screenshot: { label: "Screenshot · 16:9", width: 1600, height: 900 },

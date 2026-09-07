@@ -17,6 +17,7 @@ import { BrowsePage } from "./pages/browse-page";
 import { ReviewsPage } from "./pages/reviews-page";
 import { GalleryPage } from "./pages/gallery-page";
 import { StatisticsPage } from "./pages/statistics-page";
+import { ProfilePage } from "./pages/profile-page";
 import { SettingsPage } from "./pages/settings-page";
 interface Route {
   page: AppPage;
@@ -89,7 +90,8 @@ function AppContent() {
       search={route.search}
       onSearch={search}
       onAdd={() => setForm("new")}
-      name={data.preferences.displayName}
+      name={data.profile.displayName}
+      avatarImage={data.profile.avatarImage}
     >
       {!ready ? (
         <LinearProgress aria-label="Loading your library" />
@@ -132,7 +134,10 @@ function AppContent() {
           {route.page === "reviews" && <ReviewsPage onGame={openGame} />}
           {route.page === "gallery" && <GalleryPage onGame={openGame} />}
           {route.page === "statistics" && <StatisticsPage />}
-          {route.page === "settings" && <SettingsPage />}
+          {route.page === "profile" && <ProfilePage />}
+          {route.page === "settings" && (
+            <SettingsPage onProfile={() => page("profile")} />
+          )}
         </>
       )}
       {ready && form && (

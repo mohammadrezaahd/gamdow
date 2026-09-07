@@ -181,6 +181,25 @@ export function GameDetail({
             <Typography color="text.secondary">
               {game.description || "Add a description to make this page yours."}
             </Typography>
+            <Box>
+              <Typography variant="overline" color="text.secondary">
+                TAGS / ALTERNATE NAMES
+              </Typography>
+              <Stack
+                direction="row"
+                useFlexGap
+                sx={{ flexWrap: "wrap", gap: 1, mt: 1 }}
+              >
+                {game.tags.map((tag) => (
+                  <Chip key={tag} label={tag} sx={{ maxWidth: "100%" }} />
+                ))}
+                {!game.tags.length && (
+                  <Typography variant="body2" color="text.secondary">
+                    Add tags or alternate names from Edit game.
+                  </Typography>
+                )}
+              </Stack>
+            </Box>
             <Box
               sx={{
                 display: "grid",

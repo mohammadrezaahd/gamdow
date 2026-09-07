@@ -1,4 +1,6 @@
 "use client";
+import { TagField } from "@/components/ui/tag-field";
+import { normalizeTags } from "@/lib/tags";
 import { DateField } from "@/components/ui";
 import { ImageUpload } from "@/components/ui";
 import { imagePresets } from "@/lib/image";
@@ -27,6 +29,7 @@ import { plans, statuses } from "@/services/library-repository";
 import { newId, useLibrary } from "../library-context";
 const empty: GameInput = {
   title: "",
+  tags: [],
   genres: [],
   platform: "PC",
   status: "Not started",
@@ -158,6 +161,12 @@ export function GameForm({
                 renderInput={(p) => <TextField {...p} label="Series" />}
               />
             </Box>
+            <TagField
+              label="Tags & alternate names"
+              value={draft.tags}
+              suggestions={normalizeTags(data.games.flatMap((g) => g.tags))}
+              onChange={(tags) => field("tags", tags)}
+            />
             <TextField
               label="Description"
               multiline

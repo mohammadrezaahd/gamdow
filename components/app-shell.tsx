@@ -27,6 +27,7 @@ import {
   MoreHorizRounded,
   SearchRounded,
   SettingsRounded,
+  PersonOutlineRounded,
   ViewTimelineRounded,
   CloseRounded,
   NorthEastRounded,
@@ -40,7 +41,8 @@ export type AppPage =
   | "reviews"
   | "gallery"
   | "statistics"
-  | "settings";
+  | "settings"
+  | "profile";
 export const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
   { page: "dashboard", label: "Overview", icon: <DashboardRounded /> },
   { page: "library", label: "Library", icon: <GridViewRounded /> },
@@ -53,6 +55,7 @@ export const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
   { page: "reviews", label: "Reviews", icon: <MenuBookRounded /> },
   { page: "gallery", label: "Gallery", icon: <AutoAwesomeRounded /> },
   { page: "statistics", label: "Statistics", icon: <BarChartRounded /> },
+  { page: "profile", label: "Profile", icon: <PersonOutlineRounded /> },
   { page: "settings", label: "Settings", icon: <SettingsRounded /> },
 ];
 type Props = PropsWithChildren<{
@@ -62,6 +65,7 @@ type Props = PropsWithChildren<{
   onSearch: (value: string) => void;
   onAdd: () => void;
   name: string;
+  avatarImage?: string;
 }>;
 export function AppShell({
   children,
@@ -71,6 +75,7 @@ export function AppShell({
   onSearch,
   onAdd,
   name,
+  avatarImage,
 }: Props) {
   const [more, setMore] = useState(false);
   const go = (next: AppPage) => {
@@ -197,11 +202,13 @@ export function AppShell({
             New entry
           </Button>
           <IconButton
-            aria-label="Profile settings"
-            onClick={() => go("settings")}
+            aria-label="Your profile"
+            onClick={() => go("profile")}
             sx={{ display: { xs: "none", sm: "flex" } }}
           >
             <Avatar
+              src={avatarImage || undefined}
+              alt={name}
               sx={{
                 width: 35,
                 height: 35,

@@ -1,4 +1,6 @@
 "use client";
+import type { ProfileInput } from "@/types/profile";
+import { normalizeTags } from "@/lib/tags";
 import { Button } from "@/components/ui";
 import {
   createContext,
@@ -34,6 +36,7 @@ interface LibraryContextValue {
   data: LibrarySnapshot;
   saveCategory: (mutation: TaxonomyMutation) => void;
   deleteCategory: (kind: TaxonomyKind, id: string) => void;
+  saveProfile: (input: ProfileInput) => void;
   ready: boolean;
   notify: (message: string) => void;
   reorderGames: (games: Game[]) => void;
@@ -92,6 +95,25 @@ export function LibraryProvider({ children }: PropsWithChildren) {
   const value: LibraryContextValue = {
     data,
     ready,
+    saveProfile: (input) => {
+      const displayName = input.displayName.trim();
+      if (!displayName) throw new Error("A display name is required.");
+      setData((d) => ({
+        ...d,
+        profile: {
+          ...d.profile,
+          ...input,
+          displayName,
+          username: input.username.trim(),
+          bio: input.bio.trim(),
+          location: input.location.trim(),
+          favoritePlatforms: normalizeTags(input.favoritePlatforms),
+          updatedAt: new Date().toISOString(),
+        },
+        preferences: { ...d.preferences, displayName },
+      }));
+      notify("Profile updated");
+    },
     notify,
     saveCategory: (mutation) => {
       setData(saveTaxonomy(data, mutation, newId(), new Date().toISOString()));
@@ -111,6 +133,7 @@ export function LibraryProvider({ children }: PropsWithChildren) {
           ...d,
           games: upsert(d.games, {
             ...game,
+            tags: normalizeTags(game.tags),
             updatedAt: new Date().toISOString(),
           }),
         }),
@@ -155,7 +178,11 @@ export function LibraryProvider({ children }: PropsWithChildren) {
       notify("Screenshot removed");
     },
     savePreferences: (preferences) => {
-      setData((d) => ({ ...d, preferences }));
+      setData((d) => ({
+        ...d,
+        preferences,
+        profile: { ...d.profile, displayName: preferences.displayName },
+      }));
       notify("Preferences saved");
     },
     replace: (snapshot) => {

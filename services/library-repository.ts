@@ -1,3 +1,5 @@
+import { normalizeTags } from "@/lib/tags";
+import { fakeProfile } from "@/data/fake-profile";
 import { normalizeTaxonomies, taxonomyKey } from "@/lib/taxonomy";
 import { readSnapshot, writeSnapshot } from "./browser-store";
 import {
@@ -23,6 +25,7 @@ export const plans = [
 ] as const;
 export const initialLibrary: LibrarySnapshot = normalizeTaxonomies({
   version: 1,
+  profile: fakeProfile,
   games: fakeGames,
   collections: fakeCollections,
   gallery: fakeGalleryItems,
@@ -56,6 +59,7 @@ export function parseLibrary(value: unknown): LibrarySnapshot {
       typeof g.title !== "string" ||
       !g.title.trim() ||
       !strings(g.genres) ||
+      (g.tags !== undefined && !strings(g.tags)) ||
       typeof g.platform !== "string" ||
       !statuses.includes(g.status as never) ||
       !plans.includes(g.plan as never) ||
@@ -172,7 +176,41 @@ export function parseLibrary(value: unknown): LibrarySnapshot {
       names.add(taxonomyKey(entry.name));
     }
   }
-  return normalizeTaxonomies(value as unknown as LibrarySnapshot);
+  const profile = value.profile;
+  if (
+    profile !== undefined &&
+    (!record(profile) ||
+      ![
+        "id",
+        "displayName",
+        "username",
+        "bio",
+        "location",
+        "avatarImage",
+        "createdAt",
+        "updatedAt",
+      ].every((field) => typeof profile[field] === "string") ||
+      !String(profile.displayName).trim() ||
+      !strings(profile.favoritePlatforms))
+  )
+    throw new Error("Invalid profile in backup.");
+  const snapshot = value as unknown as LibrarySnapshot;
+  const migratedProfile = snapshot.profile ?? {
+    ...fakeProfile,
+    displayName: snapshot.preferences.displayName,
+  };
+  return normalizeTaxonomies({
+    ...snapshot,
+    profile: migratedProfile,
+    preferences: {
+      ...snapshot.preferences,
+      displayName: migratedProfile.displayName,
+    },
+    games: snapshot.games.map((game) => ({
+      ...game,
+      tags: normalizeTags(game.tags ?? []),
+    })),
+  });
 }
 // Replace this adapter with an HTTP repository when the API is available.
 export const libraryRepository: LibraryRepository = {

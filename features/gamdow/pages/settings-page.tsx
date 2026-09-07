@@ -14,7 +14,7 @@ import { TaxonomyManager } from "../components/taxonomy-manager";
 import { useLibrary } from "../library-context";
 import { parseLibrary } from "@/services/library-repository";
 import type { LibrarySnapshot } from "@/types/game";
-export function SettingsPage() {
+export function SettingsPage({ onProfile }: { onProfile: () => void }) {
   const { data, savePreferences, replace } = useLibrary();
   const [draft, setDraft] = useState(data.preferences);
   const [restore, setRestore] = useState<LibrarySnapshot | null>(null);
@@ -62,15 +62,10 @@ export function SettingsPage() {
           sx={{ p: 3 }}
         >
           <Stack spacing={3}>
-            <Typography variant="h5">Profile & preferences</Typography>
-            <TextField
-              label="Display name"
-              required
-              value={draft.displayName}
-              onChange={(e) =>
-                setDraft({ ...draft, displayName: e.target.value })
-              }
-            />
+            <Typography variant="h5">Preferences</Typography>
+            <Button variant="outlined" onClick={onProfile}>
+              View & edit profile
+            </Button>
             <TextField
               select
               label="Default library view"

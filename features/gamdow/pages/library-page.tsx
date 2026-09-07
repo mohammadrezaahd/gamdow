@@ -9,6 +9,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from "@/components/ui";
+import { matchesGameSearch } from "@/lib/tags";
 import { useState } from "react";
 import { Box, FormControlLabel, Paper, Stack, Typography } from "@mui/material";
 import {
@@ -64,7 +65,7 @@ export function LibraryPage({
   const games = data.games
     .filter(
       (g) =>
-        g.title.toLowerCase().includes(search.toLowerCase()) &&
+        matchesGameSearch(g, search) &&
         (filters.status === "All" || g.status === filters.status) &&
         (filters.genre === "All" || g.genres.includes(filters.genre)) &&
         (filters.series === "All" || g.series === filters.series) &&
@@ -103,7 +104,7 @@ export function LibraryPage({
           }}
         >
           <TextField
-            label="Search library"
+            label="Search titles or tags"
             size="small"
             value={search}
             onChange={(e) => onSearch(e.target.value)}

@@ -1,3 +1,4 @@
+import type { UserProfile } from "./profile";
 import type { Genre, GameSeries } from "./taxonomy";
 export type GameStatus =
   "Not started" | "Playing" | "On hold" | "Completed" | "Dropped";
@@ -18,6 +19,7 @@ export interface JournalEntry {
 export interface Game {
   id: string;
   title: string;
+  tags: string[];
   releaseYear?: number;
   genres: string[];
   genreIds?: string[];
@@ -75,6 +77,7 @@ export interface LibrarySnapshot {
   series: GameSeries[];
   gallery: GalleryItem[];
   preferences: UserPreferences;
+  profile: UserProfile;
 }
 export type GameInput = Omit<Game, "id" | "updatedAt">;
 export interface LibraryRepository {
