@@ -1,3 +1,8 @@
+import {
+  libraryView,
+  commitLibrary,
+  validateSteamReferences,
+} from "@/server/library-storage";
 import { z } from "zod";
 import { requireSession } from "@/server/session";
 import { database } from "@/server/database";
@@ -7,7 +12,10 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     const { account } = await requireSession();
-    return json({ snapshot: account.snapshot, revision: account.revision });
+    return json({
+      snapshot: await libraryView(account),
+      revision: account.revision,
+    });
   } catch (error) {
     return failure(error);
   }
@@ -64,22 +72,16 @@ export async function PUT(request: Request) {
         "Some images do not belong to your account or no longer exist.",
         "INVALID_MEDIA",
       );
-    const result = await db.accounts.updateOne(
-      { _id: account._id, revision: input.revision },
-      {
-        $set: { snapshot, lastMutationId: input.mutationId },
-        $inc: { revision: 1 },
-      },
-    );
-    if (!result.modifiedCount) {
-      const latest = await db.accounts.findOne({ _id: account._id });
-      if (latest?.lastMutationId === input.mutationId)
-        return json({ revision: latest.revision });
-      throw new HttpError(
-        409,
-        "Your archive changed in another tab or device. Export your pending changes, then reload the server version.",
-        "REVISION_CONFLICT",
-      );
+    await validateSteamReferences(snapshot, account.snapshot);
+    try {
+      await commitLibrary(account, snapshot, input.mutationId);
+    } catch (error) {
+      if (error instanceof HttpError && error.code === "REVISION_CONFLICT") {
+        const latest = await db.accounts.findOne({ _id: account._id });
+        if (latest?.lastMutationId === input.mutationId)
+          return json({ revision: latest.revision });
+      }
+      throw error;
     }
     return json({ revision: input.revision + 1 });
   } catch (error) {

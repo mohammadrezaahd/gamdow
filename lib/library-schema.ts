@@ -1,3 +1,4 @@
+import { isSteamImage } from "./steam-images";
 import { z } from "zod";
 import { normalizeTaxonomies, taxonomyKey } from "./taxonomy";
 import { normalizeTags } from "./tags";
@@ -43,6 +44,22 @@ const image = z
     (v) => v === "" || /^\/api\/media\/[a-f0-9-]{36}$/.test(v),
     "Images must be uploaded to this account. Legacy embedded images and external URLs cannot be imported.",
   );
+const gameImage = z
+  .string()
+  .max(2000)
+  .refine(
+    (v) => image.safeParse(v).success || isSteamImage(v),
+    "Invalid game image",
+  );
+const manualMetadataSchema = z.object({
+  title: name,
+  description: text,
+  coverImage: image,
+  heroImage: image.optional(),
+  releaseYear: z.number().int().min(1950).max(2200).optional(),
+  releaseDate: date.optional(),
+  genres: z.array(name),
+});
 const score = z.number().min(0).max(10).optional();
 const category = z.object({
   id,
@@ -68,6 +85,11 @@ export const snapshotSchema = z
     games: z.array(
       z.object({
         id,
+        source: z.enum(["MANUAL", "STEAM"]).default("MANUAL"),
+        steamAppId: z.number().int().positive().max(4294967295).optional(),
+        originalManualMetadata: manualMetadataSchema.optional(),
+        manualProgress: z.number().min(0).max(100).optional(),
+        releaseDate: date.optional(),
         title: name,
         tags: z.array(z.string().max(500)).default([]),
         releaseYear: z.number().int().min(1950).max(2200).optional(),
@@ -93,8 +115,8 @@ export const snapshotSchema = z
           })
           .optional(),
         journalEntries: z.array(z.object({ id, date, text })),
-        coverImage: image,
-        heroImage: image.optional(),
+        coverImage: gameImage,
+        heroImage: gameImage.optional(),
         startedAt: date.optional(),
         completedAt: date.optional(),
         plannedAt: date.optional(),
@@ -146,7 +168,24 @@ export const snapshotSchema = z
       s.gallery.some((p) => !ids.has(p.gameId))
     )
       fail("A referenced game does not exist");
+    const steamIds = s.games
+      .filter((g) => g.source === "STEAM")
+      .map((g) => String(g.steamAppId));
+    if (!unique(steamIds))
+      fail("A Steam game can only appear once in your library");
     for (const g of s.games) {
+      if ((g.source === "STEAM") !== (g.steamAppId !== undefined))
+        fail("Invalid game source");
+      if (
+        g.source === "MANUAL" &&
+        [
+          g.coverImage,
+          g.heroImage,
+          g.originalManualMetadata?.coverImage,
+          g.originalManualMetadata?.heroImage,
+        ].some((v) => v && isSteamImage(v))
+      )
+        fail("Manual images must be uploaded");
       if (!unique(g.journalEntries.map((j) => j.id)))
         fail("Duplicate journal IDs");
       if (g.startedAt && g.completedAt && g.completedAt < g.startedAt)
@@ -170,10 +209,15 @@ export function mediaReferences(snapshot: LibrarySnapshot): string[] {
     ...new Set(
       [
         snapshot.profile.avatarImage,
-        ...snapshot.games.flatMap((g) => [g.coverImage, g.heroImage]),
+        ...snapshot.games.flatMap((g) => [
+          g.coverImage,
+          g.heroImage,
+          g.originalManualMetadata?.coverImage,
+          g.originalManualMetadata?.heroImage,
+        ]),
         ...snapshot.gallery.map((p) => p.image),
       ]
-        .filter((v): v is string => !!v)
+        .filter((v): v is string => !!v && v.startsWith("/api/media/"))
         .map((v) => v.split("/").pop()!),
     ),
   ];

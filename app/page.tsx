@@ -1,3 +1,4 @@
+import { libraryView } from "@/server/library-storage";
 import { redirect } from "next/navigation";
 import { GamdowApp } from "@/features/gamdow/gamdow-app";
 import { currentSession } from "@/server/session";
@@ -8,7 +9,7 @@ export default async function HomePage() {
   return (
     <GamdowApp
       initial={{
-        snapshot: session.account.snapshot,
+        snapshot: await libraryView(session.account),
         revision: session.account.revision,
       }}
     />

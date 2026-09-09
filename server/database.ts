@@ -1,13 +1,23 @@
 import "server-only";
 import { MongoClient } from "mongodb";
 import type { LibrarySnapshot } from "@/types/game";
+import type { StoredLibrarySnapshot } from "@/types/user-game";
+import type {
+  CatalogDocument,
+  SteamConnectionDocument,
+  SteamUserGameDocument,
+  SteamSchemaDocument,
+  SteamJobDocument,
+  SteamStateDocument,
+} from "./steam/models";
 import { config } from "./config";
 export interface AccountDocument {
   _id: string;
   email: string;
   passwordHash: string;
   createdAt: Date;
-  snapshot: LibrarySnapshot;
+  snapshot: LibrarySnapshot | StoredLibrarySnapshot;
+  legacySnapshot?: LibrarySnapshot;
   revision: number;
   lastMutationId?: string;
 }
@@ -39,6 +49,7 @@ export async function database() {
   const c = config();
   state.gamdowMongo ??= new MongoClient(c.mongodbUri, {
     maxPoolSize: 5,
+    ignoreUndefined: true,
     minPoolSize: 0,
     maxIdleTimeMS: 60000,
     serverSelectionTimeoutMS: 10000,
@@ -53,7 +64,25 @@ export async function database() {
   const sessions = db.collection<SessionDocument>("sessions");
   const media = db.collection<MediaDocument>("media");
   const limits = db.collection<RateDocument>("rate_limits");
+  const catalog = db.collection<CatalogDocument>("steam_catalog");
+  const steamConnections =
+    db.collection<SteamConnectionDocument>("steam_connections");
+  const steamUserGames =
+    db.collection<SteamUserGameDocument>("steam_user_games");
+  const steamSchemas = db.collection<SteamSchemaDocument>(
+    "steam_achievement_schemas",
+  );
+  const steamJobs = db.collection<SteamJobDocument>("steam_sync_jobs");
+  const steamState = db.collection<SteamStateDocument>("steam_state");
   state.gamdowIndexes ??= Promise.all([
+    catalog.createIndex({ type: 1, searchName: 1 }),
+    catalog.createIndex({ type: 1, searchTokens: 1, _id: 1 }),
+    steamConnections.createIndex({ steamId: 1 }, { unique: true }),
+    steamUserGames.createIndex(
+      { userId: 1, generation: 1, steamAppId: 1 },
+      { unique: true },
+    ),
+    steamState.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     accounts.createIndex({ email: 1 }, { unique: true }),
     sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     sessions.createIndex({ userId: 1 }),
@@ -66,5 +95,16 @@ export async function database() {
       throw error;
     });
   await state.gamdowIndexes;
-  return { accounts, sessions, media, limits };
+  return {
+    accounts,
+    sessions,
+    media,
+    limits,
+    catalog,
+    steamConnections,
+    steamUserGames,
+    steamSchemas,
+    steamJobs,
+    steamState,
+  };
 }

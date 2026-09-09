@@ -9,7 +9,9 @@
     "build:prod": "node --env-file=.env.prod node_modules/next/dist/bin/next build",
     "start:prod": "node --env-file=.env.prod node_modules/next/dist/bin/next start",
     "db:check": "node --env-file=.env.local scripts/check-db.mjs",
-    "db:check:prod": "node --env-file=.env.prod scripts/check-db.mjs"
+    "db:check:prod": "node --env-file=.env.prod scripts/check-db.mjs",
+    "steam:catalog": "node --env-file=.env.local scripts/sync-steam-catalog.mjs",
+    "steam:catalog:prod": "node --env-file=.env.prod scripts/sync-steam-catalog.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

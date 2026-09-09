@@ -1,3 +1,4 @@
+import type { ManualGameMetadata } from "./user-game";
 import type { UserProfile } from "./profile";
 import type { Genre, GameSeries } from "./taxonomy";
 export type GameStatus =
@@ -18,6 +19,11 @@ export interface JournalEntry {
 }
 export interface Game {
   id: string;
+  source?: "MANUAL" | "STEAM";
+  steamAppId?: number;
+  originalManualMetadata?: ManualGameMetadata;
+  manualProgress?: number;
+  releaseDate?: string;
   title: string;
   tags: string[];
   releaseYear?: number;

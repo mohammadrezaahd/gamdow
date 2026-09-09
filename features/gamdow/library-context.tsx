@@ -8,8 +8,17 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import { Alert, Snackbar, Stack, Typography } from "@mui/material";
+import {
+  Alert,
+  Snackbar,
+  Stack,
+  Typography,
+  Dialog,
+  DialogContent,
+  CircularProgress,
+} from "@mui/material";
 import type { LibraryResponse } from "@/types/api";
+import type { RunServerOperation } from "./use-cloud-library";
 import { useCloudLibrary } from "./use-cloud-library";
 import type {
   Game,
@@ -31,6 +40,7 @@ export const today = () => {
 };
 interface LibraryContextValue {
   data: LibrarySnapshot;
+  runServerOperation: RunServerOperation;
   saveCategory: (mutation: TaxonomyMutation) => void;
   deleteCategory: (kind: TaxonomyKind, id: string) => void;
   saveProfile: (input: ProfileInput) => void;
@@ -56,13 +66,24 @@ export function LibraryProvider({
   children,
   initial,
 }: PropsWithChildren<{ initial: LibraryResponse }>) {
-  const { data, setData, dirty, status, error, code, retry } =
-    useCloudLibrary(initial);
+  const {
+    data,
+    setData,
+    dirty,
+    status,
+    error,
+    code,
+    retry,
+    runServerOperation,
+    externalMessage,
+    cancelExternal,
+  } = useCloudLibrary(initial);
   const ready = true;
   const [message, notify] = useState("");
   const value: LibraryContextValue = {
     data,
     ready,
+    runServerOperation,
     hasUnsavedChanges: dirty,
     saveProfile: (input) => {
       const displayName = input.displayName.trim();
@@ -226,6 +247,20 @@ export function LibraryProvider({
         </Alert>
       )}
       {children}
+      <Dialog open={!!externalMessage} aria-labelledby="steam-operation-title">
+        <DialogContent>
+          <Stack spacing={2} sx={{ alignItems: "center", p: 2 }}>
+            <CircularProgress size={32} />
+            <Typography id="steam-operation-title" role="status">
+              {externalMessage}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Your saved notes and game progress stay unchanged.
+            </Typography>
+            <Button onClick={cancelExternal}>Pause after this step</Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
       <Snackbar
         open={!!message}
         autoHideDuration={2600}

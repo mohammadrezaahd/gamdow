@@ -52,3 +52,10 @@ These scripts use Node's `--env-file` support and work in Windows shells. Vercel
 All current UI actions persist through the authenticated library API: games, status/plan/reorder, reviews/scores, journal, gallery, collections, genres/series, tags, preferences and profile. Media uploads are separate binary requests; snapshots contain only owned media references.
 
 See [API and data model](docs/API.md) and [verification notes](docs/VERIFICATION.md). No test files or test dependencies are committed.
+
+## Steam integration
+
+Steam metadata, manual games, verified Steam account connection, resumable library sync,
+playtime and achievements are supported on the `steam` branch. See
+[Steam setup and architecture (فارسی)](docs/STEAM.fa.md) before deployment, including
+initial catalog import, migration compatibility and the required server-only environment variables.
