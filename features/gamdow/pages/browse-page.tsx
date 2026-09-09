@@ -233,7 +233,10 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { sm: "repeat(2,1fr)", xl: "repeat(3,1fr)" },
+            gridTemplateColumns: {
+              sm: "repeat(2,minmax(0,1fr))",
+              xl: "repeat(3,minmax(0,1fr))",
+            },
             gap: 2,
           }}
         >

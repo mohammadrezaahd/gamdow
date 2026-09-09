@@ -26,7 +26,7 @@ Open `http://localhost:3000`, register your own account, and add a game. In Comp
 
 ## Vercel / GitHub
 
-Preview the library import changes from branch **`steam-import`**. This branch builds on the Steam integration already merged into `main`. Read [the Persian setup guide](docs/SETUP.fa.md) before configuring Vercel. The standard Vercel build is `npm run build`, with Node.js 22.x or 24.x, and no static-export setting.
+The server, Steam integration and social login are on **`main`**. Read [the Persian setup guide](docs/SETUP.fa.md) before configuring Vercel. The standard Vercel build is `npm run build`, with Node.js 22.x or 24.x, and no static-export setting.
 
 Create an Atlas database/user and a **private** Vercel Blob store. Add the values from `.env.prod.example` to Vercel Environment Variables. Real `.env.local` and `.env.prod` are ignored by Git. No real credentials are included.
 
@@ -59,3 +59,10 @@ Steam metadata, manual games, verified Steam account connection, resumable libra
 playtime and achievements are supported. The `steam-import` branch adds a paginated owned-library preview, selected/all import, explicit manual linking, and separate resumable updates for imported games and achievements. See
 [Steam setup and architecture (فارسی)](docs/STEAM.fa.md) before deployment, including
 initial catalog import, migration compatibility and the required server-only environment variables.
+
+## Social login and Steam refresh
+
+Google and Steam sign-in, automatic five-minute playtime refresh on return to the site,
+Steam profile stats/achievement summaries, and library-quality artwork are available.
+Configure the two new Google server variables and exact callback URL using
+[the social-login setup guide (فارسی)](docs/SOCIAL_LOGIN.fa.md).

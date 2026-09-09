@@ -115,3 +115,32 @@ Before promoting the branch, verify on its Vercel Preview with the destination e
    original artwork returns and no Steam CDN image becomes a manual-upload reference.
 7. Inspect the new `steam_owned_libraries` TTL index in Compass; disconnect must remove
    this account's preview and Steam stats while retaining its personal archive.
+
+## Social login, automatic activity refresh and artwork
+
+The follow-up passed the production build/TypeScript, 12 new server regression groups,
+20 existing Steam import/service groups, 8 existing import UI/hook groups, an artwork
+fallback interaction check and an automatic-refresh lifecycle check (42 groups total).
+No verification code or test dependencies are committed. `jose` is a runtime dependency
+for validating Google's signed ID tokens.
+
+New checks execute actual OAuth/session/Steam services with controlled Google token/JWKS
+and Steam OpenID responses. Google tokens are genuinely signed with a temporary test RSA
+key and verified by jose: wrong audience, expiry, nonce, signature and unverified email are
+rejected. The checks cover browser-bound single-use callbacks, session-bound Google linking,
+no automatic email-based account linking, preservation of password/archive, reuse of a
+connected Steam account, first Steam login, disconnect/re-login, and invalid Steam assertions.
+
+Activity checks cover imported-only bulk playtime updates, caching, preservation of manual
+progress/reviews/snapshot and private-library rejection. Profile aggregation is executed by
+an isolated Mongo-compatible query engine against fixture collections; removed achievement
+definitions, private results and other-user records do not inflate the totals. React checks
+cover initial/focus/visibility refresh, request coalescing, hidden-tab suppression, cleanup,
+and high-resolution artwork fallback/source changes without altering manual upload URLs.
+
+This does not constitute live Google/Steam account testing or real Mongo index/concurrency
+verification. Google credentials and callback registration must be configured as described in
+SOCIAL_LOGIN.fa.md. Visual mobile/browser QA was not performed because browser access remains
+restricted; responsive changes were reviewed in source and compiled. Verify real redirects,
+playtime after a Steam session, private visibility, artwork availability and 320–430px layouts
+on the deployed site.

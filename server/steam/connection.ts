@@ -81,11 +81,16 @@ export function publicJob(
     achievementUnsupported,
   };
 }
-export async function beginConnection(userId: string, sessionHash: string) {
+export async function beginConnection(
+  userId: string,
+  sessionHash: string,
+  callbackPath:
+    "/api/steam/callback" | "/api/auth/steam/callback" = "/api/steam/callback",
+) {
   steamKey();
   const state = randomBytes(32).toString("hex");
   const origin = steamOrigin();
-  const returnTo = `${origin}/api/steam/callback?state=${state}`;
+  const returnTo = `${origin}${callbackPath}?state=${state}`;
   await (
     await database()
   ).steamState.insertOne({
@@ -106,7 +111,7 @@ export async function beginConnection(userId: string, sessionHash: string) {
   }).toString();
   return { url: url.href };
 }
-export async function finishConnection(
+export async function verifySteamAssertion(
   request: Request,
   userId: string,
   sessionHash: string,
@@ -194,9 +199,43 @@ export async function finishConnection(
     sessionHash,
   });
   if (!used.deletedCount) throw invalid();
+  return steamId;
+}
+export async function finishConnection(
+  request: Request,
+  userId: string,
+  sessionHash: string,
+) {
+  const steamId = await verifySteamAssertion(request, userId, sessionHash);
+  await attachSteam(userId, steamId);
+}
+export async function attachSteam(
+  userId: string,
+  steamId: string,
+  identityLocked = false,
+): Promise<void> {
+  if (!identityLocked)
+    return withSteamLock(`oauth:steam:${steamId}`, () =>
+      attachSteam(userId, steamId, true),
+    );
+  const db = await database();
+  // An explicitly connected Steam account may also be used to sign in to this same archive.
+  const identityOwner = await db.accounts.findOne({ steamSubject: steamId });
+  if (identityOwner && identityOwner._id !== userId)
+    throw new HttpError(
+      409,
+      "This Steam account belongs to another gamdow login.",
+      "STEAM_ALREADY_CONNECTED",
+    );
   await withSteamLock(`user:${userId}`, async () => {
     const current = await db.steamConnections.findOne({ _id: userId });
-    if (current?.steamId === steamId) return;
+    if (current?.steamId === steamId) {
+      await db.accounts.updateOne(
+        { _id: userId },
+        { $set: { steamSubject: steamId } },
+      );
+      return;
+    }
     if (current)
       throw new HttpError(
         409,
@@ -210,6 +249,10 @@ export async function finishConnection(
         generation: randomUUID(),
         connectedAt: new Date().toISOString(),
       });
+      await db.accounts.updateOne(
+        { _id: userId },
+        { $set: { steamSubject: steamId } },
+      );
     } catch (e) {
       if (e && typeof e === "object" && "code" in e && e.code === 11000)
         throw new HttpError(

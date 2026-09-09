@@ -1,4 +1,5 @@
 import "server-only";
+import { steamArtwork } from "@/lib/steam-artwork";
 import type { AccountDocument } from "./database";
 import { database } from "./database";
 import { HttpError } from "./http";
@@ -51,8 +52,8 @@ export function metadataView(metadata: SteamMetadata): ManualGameMetadata {
   return {
     title: metadata.name,
     description: metadata.description,
-    coverImage: metadata.images.cover,
-    heroImage: metadata.images.background || metadata.images.header,
+    coverImage: steamArtwork(metadata.steamAppId).cover,
+    heroImage: steamArtwork(metadata.steamAppId).hero,
     releaseYear: metadata.release.year,
     genres: metadata.genres.map((g) => g.name),
   };
@@ -91,17 +92,24 @@ export async function libraryView(
     g.source === "STEAM" && g.steamAppId ? [g.steamAppId] : [],
   );
   const rows = appIds.length
-    ? await (await database()).catalog
-        .find({ _id: { $in: appIds } }, { projection: {
-          _id: 1,
-          name: 1,
-          type: 1,
-          "metadata.name": 1,
-          "metadata.description": 1,
-          "metadata.images": 1,
-          "metadata.release": 1,
-          "metadata.genres": 1,
-        } })
+    ? await (
+        await database()
+      ).catalog
+        .find(
+          { _id: { $in: appIds } },
+          {
+            projection: {
+              _id: 1,
+              name: 1,
+              type: 1,
+              "metadata.name": 1,
+              "metadata.description": 1,
+              "metadata.images": 1,
+              "metadata.release": 1,
+              "metadata.genres": 1,
+            },
+          },
+        )
         .toArray()
     : [];
   const catalog = new Map(rows.map((r) => [r._id, r]));
@@ -114,9 +122,7 @@ export async function libraryView(
             title: row?.name || `Steam app ${g.steamAppId}`,
             description: "",
             coverImage:
-              row?.type === "game"
-                ? `https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/${g.steamAppId}/header.jpg`
-                : "",
+              row?.type === "game" ? steamArtwork(g.steamAppId!).cover : "",
             genres: [],
           });
     return {

@@ -1,4 +1,6 @@
 "use client";
+import { SocialLogin } from "@/features/auth/social-login";
+import { SteamProfilePanel } from "../steam/steam-profile-panel";
 import { SteamConnectionPanel } from "../steam/steam-connection";
 import { useState } from "react";
 import { authRepository } from "@/services/auth-repository";
@@ -117,7 +119,10 @@ export function ProfilePage() {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, 1fr)" },
+          gridTemplateColumns: {
+            xs: "minmax(0,1fr) minmax(0,1fr)",
+            md: "repeat(4,minmax(0,1fr))",
+          },
           gap: 2,
           my: 3,
         }}
@@ -134,6 +139,10 @@ export function ProfilePage() {
         <Metric value={data.gallery.length} label="Memories captured" />
       </Box>
       <SteamConnectionPanel />
+      <SteamProfilePanel />
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <SocialLogin linkGoogle disabled={hasUnsavedChanges} />
+      </Paper>
       <Paper sx={{ p: 3 }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}

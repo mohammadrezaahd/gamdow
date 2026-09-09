@@ -104,7 +104,8 @@ export function DateField({
           paper: {
             sx: {
               mt: 1,
-              p: 2,
+              p: { xs: 1, sm: 2 },
+              maxWidth: "calc(100vw - 32px)",
               background: "#1b211bf7",
               backdropFilter: "blur(20px)",
               borderRadius: 2,

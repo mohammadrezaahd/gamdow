@@ -183,7 +183,10 @@ export function DashboardPage({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr 1fr", sm: "repeat(4,1fr)" },
+          gridTemplateColumns: {
+            xs: "minmax(0,1fr) minmax(0,1fr)",
+            sm: "repeat(4,minmax(0,1fr))",
+          },
           borderTop: 1,
           borderBottom: 1,
           borderColor: "divider",

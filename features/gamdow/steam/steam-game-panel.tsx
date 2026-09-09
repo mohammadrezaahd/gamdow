@@ -44,7 +44,7 @@ export function SteamGamePanel({
     setLoading(true);
     setError("");
     steamRepository
-      .details(game.steamAppId)
+      .details(game.steamAppId, retry > 0)
       .then((result) => {
         if (active) {
           setDetails(result);
@@ -64,6 +64,11 @@ export function SteamGamePanel({
       active = false;
     };
   }, [game.steamAppId, retry, onMetadata]);
+  useEffect(() => {
+    const update = () => setRetry((n) => n + 1);
+    window.addEventListener("gamdow:steam-updated", update);
+    return () => window.removeEventListener("gamdow:steam-updated", update);
+  }, []);
   if (!game.steamAppId)
     return (
       <Paper variant="outlined" sx={{ p: 3, mt: 3 }}>
@@ -185,7 +190,7 @@ export function SteamGamePanel({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(3,1fr)" },
+            gridTemplateColumns: { xs: "1fr", sm: "repeat(3,minmax(0,1fr))" },
             gap: 2,
           }}
         >
@@ -303,7 +308,10 @@ export function SteamGamePanel({
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md: "minmax(0,1fr) minmax(0,1fr)",
+                },
                 gap: 1,
                 mt: 2,
               }}
@@ -377,7 +385,10 @@ export function SteamGamePanel({
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4,1fr)" },
+                  gridTemplateColumns: {
+                    xs: "minmax(0,1fr) minmax(0,1fr)",
+                    md: "repeat(4,minmax(0,1fr))",
+                  },
                   gap: 1,
                   mt: 1,
                 }}

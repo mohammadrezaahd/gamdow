@@ -215,7 +215,7 @@ export function SteamConnectionPanel() {
       {disconnecting && (
         <ConfirmDialog
           title="Disconnect Steam?"
-          description="Your gamdow games, reviews and notes stay. Steam account access, cached personal playtime and achievement data will be removed."
+          description="Your gamdow games, reviews and notes stay. Steam library access, cached playtime and achievements will be removed. Steam sign-in remains available to prevent losing access; signing in through Steam reconnects it."
           onClose={() => setDisconnecting(false)}
           onConfirm={async () => {
             setDisconnecting(false);
@@ -223,6 +223,7 @@ export function SteamConnectionPanel() {
               await steamRepository.disconnect();
               await load();
               notify("Steam disconnected");
+              window.dispatchEvent(new Event("gamdow:steam-updated"));
             } catch (e) {
               setError(
                 e instanceof Error ? e.message : "Could not disconnect Steam.",

@@ -157,6 +157,7 @@ export function InProgressCarousel({
                         justifyContent: "space-between",
                         alignItems: "center",
                         gap: 1,
+                        flexWrap: "wrap",
                       }}
                     >
                       <Chip

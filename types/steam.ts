@@ -148,3 +148,39 @@ export type SteamSyncStart =
       revision: number;
       selection: SteamImportSelection;
     };
+
+export interface SteamProfileSummary {
+  steamId: string;
+  name: string;
+  avatar: string;
+  profileUrl: string;
+  public: boolean;
+  level?: number;
+  xp?: number;
+  badges?: number;
+  lastSyncAt: string;
+}
+export interface SteamProfileStats {
+  connected: boolean;
+  profile?: SteamProfileSummary;
+  warning?: string;
+  lastActivitySyncAt?: string;
+  imported: number;
+  totalMinutes: number;
+  playtimeKnown: number;
+  achievementsKnown: number;
+  totalAchievements: number;
+  unlockedAchievements: number;
+  items: {
+    steamAppId: number;
+    gameId: string;
+    name: string;
+    totalMinutes?: number;
+    total?: number;
+    unlocked?: number;
+    percentage?: number;
+    state: string;
+    lastSyncAt?: string;
+  }[];
+  hasMore: boolean;
+}

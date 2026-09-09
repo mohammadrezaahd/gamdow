@@ -1,4 +1,5 @@
 import "server-only";
+import { steamArtwork } from "@/lib/steam-artwork";
 import { z } from "zod";
 import { database } from "../database";
 import { HttpError } from "../http";
@@ -101,6 +102,12 @@ export async function getSteamMetadata(
   appIdSchema.parse(appId);
   const db = await database();
   const cached = await db.catalog.findOne({ _id: appId });
+  if (cached?.metadata)
+    cached.metadata.images = {
+      ...cached.metadata.images,
+      cover: steamArtwork(appId).cover,
+      background: steamArtwork(appId).hero,
+    };
   if (cached?.type === "excluded")
     throw new HttpError(
       422,
@@ -186,10 +193,10 @@ export async function getSteamMetadata(
         description: plain(v.short_description).slice(0, 100000),
         detailedDescription: plain(v.detailed_description).slice(0, 100000),
         images: {
-          cover: v.capsule_imagev5 || v.capsule_image || v.header_image,
+          cover: steamArtwork(appId).cover,
           capsule: v.capsule_image || v.header_image,
           header: v.header_image,
-          background: v.background_raw || v.background,
+          background: steamArtwork(appId).hero,
         },
         screenshots: v.screenshots
           .filter((s) => s.path_full)

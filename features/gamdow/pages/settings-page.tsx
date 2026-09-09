@@ -45,7 +45,7 @@ export function SettingsPage({ onProfile }: { onProfile: () => void }) {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { lg: "1.2fr 1fr" },
+          gridTemplateColumns: { lg: "minmax(0,1.2fr) minmax(0,1fr)" },
           gap: 3,
         }}
       >

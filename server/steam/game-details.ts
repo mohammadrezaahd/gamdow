@@ -5,6 +5,7 @@ import { database } from "../database";
 import { libraryView } from "../library-storage";
 import { HttpError } from "../http";
 import { getSteamMetadata } from "./metadata";
+import { refreshActivity } from "./activity";
 import { getAchievements } from "./achievements";
 import type { SteamGameDetails } from "@/types/steam";
 export async function steamGameDetails(
@@ -18,6 +19,17 @@ export async function steamGameDetails(
       "This Steam game is not in your library.",
       "NOT_FOUND",
     );
+  let activityWarning: string | undefined;
+  if (await (await database()).steamConnections.findOne({ _id: account._id })) {
+    try {
+      await refreshActivity(account._id);
+    } catch (e) {
+      activityWarning =
+        e instanceof HttpError
+          ? e.message
+          : "Steam playtime could not be refreshed; showing saved stats.";
+    }
+  }
   return withSteamLock(`user:${account._id}`, async () => {
     const db = await database();
     const c = await db.steamConnections.findOne({ _id: account._id });
@@ -26,6 +38,7 @@ export async function steamGameDetails(
       metadataStale: false,
       connected: !!c,
       playtime: null,
+      warning: activityWarning,
       achievements: {
         state: "not_synced",
         items: [],
@@ -43,7 +56,19 @@ export async function steamGameDetails(
           : "Steam metadata is unavailable. Your personal data is unchanged.";
     }
     if (c) {
-      result.achievements = await getAchievements(c, appId, force);
+      const saved = await db.steamUserGames.findOne({
+        _id: `${c.generation}:${appId}`,
+      });
+      const playedSinceCheck =
+        !!saved?.playtime?.lastPlayedAt &&
+        (!saved.achievementCheckedAt ||
+          Date.parse(saved.playtime.lastPlayedAt) >
+            Date.parse(saved.achievementCheckedAt));
+      result.achievements = await getAchievements(
+        c,
+        appId,
+        force || playedSinceCheck,
+      );
       const current = await db.steamConnections.findOne({
         _id: account._id,
         generation: c.generation,

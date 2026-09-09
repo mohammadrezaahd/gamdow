@@ -103,3 +103,29 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
+
+/* Let nested grids and long imported titles shrink within the mobile viewport. */
+html {
+  overflow-x: clip;
+}
+body {
+  width: 100%;
+  min-width: 0;
+}
+img,
+video {
+  max-width: 100%;
+}
+.MuiAlert-message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.MuiDialogTitle-root {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 380px) {
+  .archive-calendar {
+    --rdp-day-width: 32px;
+    --rdp-day_button-width: 30px;
+  }
+}

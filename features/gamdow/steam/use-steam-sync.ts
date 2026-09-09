@@ -55,6 +55,8 @@ export function useSteamSync() {
         /* Keep the visible result and original error. */
       }
       setBusy(false);
+      if (typeof window !== "undefined")
+        window.dispatchEvent(new Event("gamdow:steam-updated"));
     }
   }
   async function cancel() {

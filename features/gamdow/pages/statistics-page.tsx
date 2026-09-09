@@ -31,7 +31,10 @@ export function StatisticsPage() {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(4,1fr)" },
+              gridTemplateColumns: {
+                xs: "minmax(0,1fr) minmax(0,1fr)",
+                lg: "repeat(4,minmax(0,1fr))",
+              },
               gap: 2,
               mb: 3,
             }}
@@ -66,7 +69,7 @@ export function StatisticsPage() {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { lg: "1fr 1fr" },
+              gridTemplateColumns: { lg: "minmax(0,1fr) minmax(0,1fr)" },
               gap: 3,
             }}
           >
@@ -152,7 +155,10 @@ export function StatisticsPage() {
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(4,1fr)",
+                  gridTemplateColumns: {
+                    xs: "repeat(3,minmax(0,1fr))",
+                    sm: "repeat(4,minmax(0,1fr))",
+                  },
                   gap: 2,
                   mt: 3,
                 }}

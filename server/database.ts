@@ -16,6 +16,8 @@ export interface AccountDocument {
   _id: string;
   email: string;
   passwordHash: string;
+  googleSubject?: string;
+  steamSubject?: string;
   createdAt: Date;
   snapshot: LibrarySnapshot | StoredLibrarySnapshot;
   legacySnapshot?: LibrarySnapshot;
@@ -36,6 +38,17 @@ export interface MediaDocument {
   height: number;
   size: number;
   createdAt: Date;
+}
+export interface AuthFlowDocument {
+  _id: string;
+  provider: "google" | "steam";
+  browserHash: string;
+  nonce: string;
+  verifier: string;
+  expiresAt: Date;
+  remember: boolean;
+  userId?: string;
+  sessionHash?: string;
 }
 interface RateDocument {
   _id: string;
@@ -61,6 +74,7 @@ export async function database() {
       throw error;
     });
   const db = (await state.gamdowMongo).db(c.dbName);
+  const authFlows = db.collection<AuthFlowDocument>("auth_flows");
   const accounts = db.collection<AccountDocument>("accounts");
   const sessions = db.collection<SessionDocument>("sessions");
   const media = db.collection<MediaDocument>("media");
@@ -79,6 +93,7 @@ export async function database() {
   );
   const steamState = db.collection<SteamStateDocument>("steam_state");
   state.gamdowIndexes ??= Promise.all([
+    authFlows.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     catalog.createIndex({ type: 1, searchName: 1 }),
     catalog.createIndex({ type: 1, searchTokens: 1, _id: 1 }),
     steamConnections.createIndex({ steamId: 1 }, { unique: true }),
@@ -92,6 +107,8 @@ export async function database() {
     ),
     steamState.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     accounts.createIndex({ email: 1 }, { unique: true }),
+    accounts.createIndex({ googleSubject: 1 }, { unique: true, sparse: true }),
+    accounts.createIndex({ steamSubject: 1 }, { unique: true, sparse: true }),
     sessions.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     sessions.createIndex({ userId: 1 }),
     limits.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
@@ -104,6 +121,7 @@ export async function database() {
     });
   await state.gamdowIndexes;
   return {
+    authFlows,
     accounts,
     sessions,
     media,

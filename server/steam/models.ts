@@ -21,6 +21,8 @@ export interface SteamConnectionDocument {
   generation: string;
   connectedAt: string;
   lastLibrarySyncAt?: string;
+  lastActivitySyncAt?: string;
+  profile?: import("@/types/steam").SteamProfileSummary;
 }
 export interface SteamUserGameDocument {
   _id: string; // generation:appid; disconnect revokes visibility immediately

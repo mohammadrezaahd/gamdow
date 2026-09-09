@@ -99,7 +99,10 @@ export function LibraryPage({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr 1fr", lg: "repeat(4,1fr)" },
+            gridTemplateColumns: {
+              xs: "minmax(0,1fr) minmax(0,1fr)",
+              lg: "repeat(4,minmax(0,1fr))",
+            },
             gap: 2,
           }}
         >

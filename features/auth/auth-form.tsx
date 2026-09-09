@@ -1,4 +1,5 @@
 "use client";
+import { SocialLogin } from "./social-login";
 import { useState } from "react";
 import Link from "next/link";
 import { Alert, Box, FormControlLabel, Stack, Typography } from "@mui/material";
@@ -64,6 +65,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       aria-label={registering ? "Registration" : "Login"}
     >
       <Stack spacing={2.5}>
+        <SocialLogin disabled={busy} remember={values.rememberMe} />
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ textAlign: "center" }}
+        >
+          OR CONTINUE WITH EMAIL
+        </Typography>
         {error && <Alert severity="error">{error}</Alert>}
         {registering && (
           <TextField

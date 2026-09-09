@@ -236,6 +236,8 @@ export const gamdowTheme = createTheme({
           borderRadius: 16,
           maxHeight: "calc(100dvh - 32px)",
           margin: 16,
+          width: "calc(100% - 32px)",
+          minWidth: 0,
         },
         container: { backdropFilter: "blur(10px)" },
       },
@@ -251,11 +253,16 @@ export const gamdowTheme = createTheme({
         },
       },
     },
-    MuiDialogContent: { styleOverrides: { root: { padding: 24 } } },
+    MuiDialogContent: {
+      styleOverrides: {
+        root: { padding: 24, minWidth: 0, overflowWrap: "anywhere" },
+      },
+    },
     MuiDialogActions: {
       styleOverrides: {
         root: {
           padding: "18px 24px",
+          flexWrap: "wrap",
           gap: 8,
           borderTop: `1px solid ${t.line}`,
         },
@@ -263,7 +270,7 @@ export const gamdowTheme = createTheme({
     },
     MuiTabs: {
       styleOverrides: {
-        root: { minHeight: 42 },
+        root: { minHeight: 42, minWidth: 0, maxWidth: "100%" },
         indicator: { height: 2, bottom: 0 },
       },
     },

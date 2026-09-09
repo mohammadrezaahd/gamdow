@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+import { artworkFallbacks } from "@/lib/steam-artwork";
 import { Box, type SxProps, type Theme } from "@mui/material";
 export function GameImage({
   src,
@@ -9,15 +11,22 @@ export function GameImage({
   alt?: string;
   sx?: SxProps<Theme>;
 }) {
+  const [failure, setFailure] = useState({ source: "", index: 0 });
+  const index = failure.source === src ? failure.index : 0;
+  const candidates = [
+    src || "/game-placeholder.svg",
+    ...artworkFallbacks(src),
+    "/game-placeholder.svg",
+  ];
   return (
     <Box
       component="img"
-      src={src || "/game-placeholder.svg"}
+      src={candidates[Math.min(index, candidates.length - 1)]}
       alt={alt}
       loading="lazy"
-      onError={(event) => {
-        event.currentTarget.onerror = null;
-        event.currentTarget.src = "/game-placeholder.svg";
+      onError={() => {
+        if (index < candidates.length - 1)
+          setFailure({ source: src || "", index: index + 1 });
       }}
       sx={sx}
     />

@@ -86,6 +86,8 @@ export function AppShell({
     <Box
       sx={{
         minHeight: "100dvh",
+        width: "100%",
+        minWidth: 0,
         px: { xs: 2, md: 3 },
         pb: { xs: "calc(110px + env(safe-area-inset-bottom))", md: 3 },
       }}
@@ -166,7 +168,9 @@ export function AppShell({
           <Box
             sx={{
               ml: { md: "auto" },
-              width: { xs: "100%", md: 280 },
+              width: { xs: "auto", md: 280 },
+              minWidth: 0,
+              flex: { xs: 1, md: "0 1 280px" },
               display: "flex",
               gap: 1,
               alignItems: "center",
@@ -318,7 +322,15 @@ export function AppShell({
             />
           </Box>
         </Box>
-        <Box component="main" sx={{ minWidth: 0, pb: 4 }}>
+        <Box
+          component="main"
+          sx={{
+            minWidth: 0,
+            maxWidth: "100%",
+            pb: 4,
+            "& > *": { minWidth: 0 },
+          }}
+        >
           {children}
         </Box>
       </Box>

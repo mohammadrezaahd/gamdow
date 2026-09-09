@@ -61,7 +61,11 @@ export function ReviewForm({
               Optional category scores
             </Typography>
             <Box
-              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)",
+                gap: 2,
+              }}
             >
               {(
                 ["story", "gameplay", "atmosphere", "visuals", "sound"] as const

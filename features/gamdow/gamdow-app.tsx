@@ -1,4 +1,5 @@
 "use client";
+import { SteamAutoSync } from "./steam/steam-auto-sync";
 import { useEffect, useState } from "react";
 import { LinearProgress } from "@mui/material";
 import { AppShell, navigation, type AppPage } from "@/components/app-shell";
@@ -94,6 +95,7 @@ function AppContent() {
       name={data.profile.displayName}
       avatarImage={data.profile.avatarImage}
     >
+      <SteamAutoSync />
       {!ready ? (
         <LinearProgress aria-label="Loading your library" />
       ) : game ? (

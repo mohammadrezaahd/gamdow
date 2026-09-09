@@ -24,6 +24,8 @@ export function SectionTitle({
       spacing={2}
       sx={{
         mb: 3,
+        minWidth: 0,
+        "& > *": { minWidth: 0, maxWidth: "100%" },
         alignItems: { xs: "flex-start", sm: "center" },
         justifyContent: "space-between",
       }}
@@ -38,7 +40,9 @@ export function SectionTitle({
             {eyebrow}
           </Typography>
         )}
-        <Typography variant="h3">{title}</Typography>
+        <Typography variant="h3" sx={{ overflowWrap: "anywhere" }}>
+          {title}
+        </Typography>
       </Box>
       {action}
     </Stack>
@@ -71,7 +75,9 @@ export function Metric({
   label: string;
 }) {
   return (
-    <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
+    <Paper
+      sx={{ p: { xs: 2, md: 2.5 }, minWidth: 0, overflowWrap: "anywhere" }}
+    >
       <Typography variant="h4">{value}</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
         {label}
