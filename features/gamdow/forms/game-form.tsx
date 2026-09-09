@@ -1,4 +1,6 @@
 "use client";
+import { SteamPicker } from "../steam/steam-picker";
+import { GameImage } from "@/components/game-image";
 import { TagField } from "@/components/ui/tag-field";
 import { normalizeTags } from "@/lib/tags";
 import { DateField } from "@/components/ui";
@@ -48,6 +50,9 @@ export function GameForm({
   onClose: () => void;
 }) {
   const { data, saveGame, saveCollection } = useLibrary();
+  const [mode, setMode] = useState<"steam" | "manual">(
+    game ? "manual" : "steam",
+  );
   const [draft, setDraft] = useState<GameInput>(game ?? empty);
   const [collectionIds, setCollectionIds] = useState(
     data.collections
@@ -86,6 +91,21 @@ export function GameForm({
     });
     onClose();
   }
+  if (!game && mode === "steam")
+    return (
+      <Dialog open onClose={onClose} fullWidth maxWidth="md">
+        <DialogTitle>Add a game</DialogTitle>
+        <DialogContent dividers>
+          <SteamPicker onAdded={onClose} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Cancel</Button>
+          <Button variant="outlined" onClick={() => setMode("manual")}>
+            Add manually
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="md">
       <Box component="form" onSubmit={submit}>
@@ -98,9 +118,24 @@ export function GameForm({
         <DialogContent dividers>
           <Stack spacing={3}>
             {error && <Alert severity="error">{error}</Alert>}
+            {!game && (
+              <Button
+                sx={{ alignSelf: "flex-start" }}
+                onClick={() => setMode("steam")}
+              >
+                Search Steam instead
+              </Button>
+            )}
+            {draft.source === "STEAM" && (
+              <Alert severity="info">
+                Game metadata comes from Steam. Edit your experience below, or
+                unlink from the Steam section to customize game metadata.
+              </Alert>
+            )}
             <Typography variant="h5">Game details</Typography>
             <TextField
               autoFocus
+              disabled={draft.source === "STEAM"}
               label="Game title"
               required
               value={draft.title}
@@ -114,6 +149,7 @@ export function GameForm({
               }}
             >
               <TextField
+                disabled={draft.source === "STEAM"}
                 label="Release year"
                 type="number"
                 slotProps={{ htmlInput: { min: 1950, max: 2200 } }}
@@ -140,6 +176,7 @@ export function GameForm({
                 ))}
               </TextField>
               <Autocomplete
+                disabled={draft.source === "STEAM"}
                 multiple
                 freeSolo
                 options={data.genres.map((genre) => genre.name)}
@@ -161,6 +198,13 @@ export function GameForm({
                 renderInput={(p) => <TextField {...p} label="Series" />}
               />
             </Box>
+            {draft.source !== "STEAM" && (
+              <DateField
+                label="Release date (optional)"
+                value={draft.releaseDate ?? ""}
+                onValueChange={(v) => field("releaseDate", v)}
+              />
+            )}
             <TagField
               label="Tags & alternate names"
               value={draft.tags}
@@ -168,6 +212,7 @@ export function GameForm({
               onChange={(tags) => field("tags", tags)}
             />
             <TextField
+              disabled={draft.source === "STEAM"}
               label="Description"
               multiline
               minRows={3}
@@ -181,22 +226,51 @@ export function GameForm({
                 gap: 2,
               }}
             >
-              <ImageUpload
-                label="Cover"
-                preset={imagePresets.cover}
-                value={draft.coverImage}
-                onImages={(images) => field("coverImage", images[0].src)}
-                onRemove={() => field("coverImage", "")}
-              />
-              <ImageUpload
-                label="Banner"
-                preset={imagePresets.banner}
-                value={draft.heroImage}
-                onImages={(images) => field("heroImage", images[0].src)}
-                onRemove={() => field("heroImage", "")}
-              />
+              {draft.source === "STEAM" ? (
+                <GameImage
+                  src={draft.coverImage}
+                  alt="Steam cover"
+                  sx={{ width: "100%", height: 160, objectFit: "contain" }}
+                />
+              ) : (
+                <ImageUpload
+                  label="Cover"
+                  preset={imagePresets.cover}
+                  value={draft.coverImage}
+                  onImages={(images) => field("coverImage", images[0].src)}
+                  onRemove={() => field("coverImage", "")}
+                />
+              )}
+              {draft.source === "STEAM" ? (
+                <GameImage
+                  src={draft.heroImage}
+                  alt="Steam banner"
+                  sx={{ width: "100%", height: 160, objectFit: "cover" }}
+                />
+              ) : (
+                <ImageUpload
+                  label="Banner"
+                  preset={imagePresets.banner}
+                  value={draft.heroImage}
+                  onImages={(images) => field("heroImage", images[0].src)}
+                  onRemove={() => field("heroImage", "")}
+                />
+              )}
             </Box>
             <Typography variant="h5">Your experience</Typography>
+            <TextField
+              label="Manual game progress / 100"
+              type="number"
+              slotProps={{ htmlInput: { min: 0, max: 100 } }}
+              value={draft.manualProgress ?? ""}
+              helperText="Your own estimate. Separate from Steam playtime and achievements."
+              onChange={(e) =>
+                field(
+                  "manualProgress",
+                  e.target.value === "" ? undefined : Number(e.target.value),
+                )
+              }
+            />
             <Box
               sx={{
                 display: "grid",
@@ -224,7 +298,7 @@ export function GameForm({
                 ))}
               </TextField>
               <TextField
-                label="Hours played"
+                label="Manually logged hours"
                 type="number"
                 slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
                 value={draft.hoursPlayed ?? ""}

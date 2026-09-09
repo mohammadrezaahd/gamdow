@@ -27,3 +27,45 @@ After setting environment variables and deploying the `server` branch:
 5. Export/import the same account's metadata backup. Verify profile and game relationships. This export does not contain image binaries.
 6. Log out, verify protected pages/media reject access, then log back in and verify persistence.
 7. Check the Atlas `accounts`, `sessions`, `media` and `rate_limits` collections in Compass and verify the files in the connected private Blob store.
+
+## Steam branch verification
+
+The Steam implementation was checked with 28 executable service/route regression groups
+and 4 React autosave/coordination groups using temporary scripts outside the repository.
+These execute the real application code with controlled Steam responses and an isolated
+Mongo collection adapter; they are not live Steam or MongoDB integration tests.
+
+Covered: non-mutating legacy reads; lossless v1 → v2 writes; manual editing; metadata
+normalization, caching and stale fallback; DLC rejection; linking/unlinking with personal
+history and original uploaded artwork retained in backups; App-ID idempotency; media
+validation/ownership; CAS conflicts and retries; empty versus private libraries; catalog
+flags, pagination and watermark; local search and discovery cache; OpenID session binding,
+assertion fields, verification request and replay rejection; bounded resumable library sync;
+playtime updates without changing scores/progress/order; separate achievement definitions
+and unlocks; privacy handling; distributed leases; retained associations after metadata
+removal; disconnect cleanup; scheduler and CSRF rejection; server-only credentials.
+
+The hook checks serial/coalesced autosaves, blocking Steam mutations while dirty, reloading
+snapshot/revision after successful or partially failed operations, and cooperative pause.
+Actual local image decode/re-encode and authenticated reads were exercised with Sharp.
+Next.js production build and TypeScript compilation pass. An initial Turbopack persistence
+cache panic was resolved by discarding the old generated cache and rebuilding cleanly.
+
+No live Steam key/account callback, actual MongoDB index/concurrency behavior, Vercel
+scheduler or Blob network upload was exercised in this turn. Browser visual QA was not
+performed. Configure the destination environment and complete these deployment checks:
+
+1. Bootstrap the catalog with `npm run steam:catalog:prod`; run again and inspect that
+   incremental requests use the saved watermark rather than importing metadata for every app.
+2. Connect a real Steam account from Profile. Cancel one sign-in, then complete another.
+   Verify that disconnecting removes personal Steam cache and preserves manual/user data.
+3. Sync a public library, pause/resume, then sync again after cooldown. Verify no duplicate
+   App IDs and no changed reviews, scores, tags, collection memberships or manual progress.
+4. Check a private profile/game-details account and a game without achievements; verify
+   meaningful unavailable/unsupported states instead of invented zero progress.
+5. Link a manual game containing an uploaded cover, gallery, review and journal entry;
+   export its backup, unlink and verify that its original metadata and personal history remain.
+6. Confirm official Steam images use CDN URLs and do not create Blob objects, while
+   cropped user uploads still use the existing private media flow.
+7. Verify the server collections/indexes with Compass, the scheduled catalog route with
+   `CRON_SECRET`, and the appearance on desktop and mobile in the deployed application.

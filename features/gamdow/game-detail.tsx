@@ -1,4 +1,6 @@
 "use client";
+import { SteamGamePanel } from "./steam/steam-game-panel";
+import type { SteamMetadata } from "@/types/steam";
 import { DateField } from "@/components/ui";
 import {
   Button,
@@ -39,6 +41,10 @@ export function GameDetail({
   onGame: (id: string) => void;
 }) {
   const { data, saveGame, deleteGame } = useLibrary();
+  const [steamMetadata, setSteamMetadata] = useState<SteamMetadata | null>(
+    null,
+  );
+  const visibleMetadata = game.source === "STEAM" ? steamMetadata : null;
   const [tab, setTab] = useState(initialTab);
   const [review, setReview] = useState(false);
   const [remove, setRemove] = useState<"game" | "review" | JournalEntry | null>(
@@ -83,7 +89,12 @@ export function GameDetail({
         }}
       >
         <GameImage
-          src={game.heroImage || game.coverImage}
+          src={
+            visibleMetadata?.images.background ||
+            visibleMetadata?.images.header ||
+            game.heroImage ||
+            game.coverImage
+          }
           sx={{
             position: "absolute",
             inset: 0,
@@ -109,7 +120,7 @@ export function GameDetail({
           }}
         >
           <GameImage
-            src={game.coverImage}
+            src={visibleMetadata?.images.cover || game.coverImage}
             alt={game.title}
             sx={{
               width: 110,
@@ -128,13 +139,17 @@ export function GameDetail({
             >
               <Chip size="small" color="primary" label={game.status} />
               <Typography variant="body2">
-                {[game.releaseYear, game.platform, game.edition]
+                {[
+                  visibleMetadata?.release.year ?? game.releaseYear,
+                  game.platform,
+                  game.edition,
+                ]
                   .filter(Boolean)
                   .join(" · ")}
               </Typography>
             </Stack>
             <Typography variant="h2" sx={{ mt: 1 }}>
-              {game.title}
+              {visibleMetadata?.name || game.title}
             </Typography>
             <Stack
               direction="row"
@@ -145,7 +160,10 @@ export function GameDetail({
               {game.rating !== undefined && (
                 <Chip color="primary" label={`${game.rating} / 10`} />
               )}
-              {game.genres.map((g) => (
+              {(visibleMetadata
+                ? visibleMetadata.genres.map((g) => g.name)
+                : game.genres
+              ).map((g) => (
                 <Chip key={g} label={g} />
               ))}
             </Stack>
@@ -178,8 +196,15 @@ export function GameDetail({
         </Tabs>
         {tab === 0 && (
           <Stack spacing={3}>
+            {game.manualProgress !== undefined && (
+              <Typography color="primary.main">
+                Manual game progress · {game.manualProgress}%
+              </Typography>
+            )}
             <Typography color="text.secondary">
-              {game.description || "Add a description to make this page yours."}
+              {visibleMetadata?.description ||
+                game.description ||
+                "Add a description to make this page yours."}
             </Typography>
             <Box>
               <Typography variant="overline" color="text.secondary">
@@ -410,6 +435,7 @@ export function GameDetail({
           </Stack>
         )}
       </Paper>
+      <SteamGamePanel game={game} onMetadata={setSteamMetadata} />
       {review && <ReviewForm game={game} onClose={() => setReview(false)} />}
       {remove && (
         <ConfirmDialog

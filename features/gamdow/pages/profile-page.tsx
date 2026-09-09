@@ -1,4 +1,5 @@
 "use client";
+import { SteamConnectionPanel } from "../steam/steam-connection";
 import { useState } from "react";
 import { authRepository } from "@/services/auth-repository";
 import { Alert, Avatar, Box, Paper, Stack, Typography } from "@mui/material";
@@ -132,6 +133,7 @@ export function ProfilePage() {
         />
         <Metric value={data.gallery.length} label="Memories captured" />
       </Box>
+      <SteamConnectionPanel />
       <Paper sx={{ p: 3 }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}

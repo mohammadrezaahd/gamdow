@@ -20,7 +20,9 @@ export async function currentSession() {
   });
   if (!session) return null;
   const account = await db.accounts.findOne({ _id: session.userId });
-  return account ? { account, expiresAt: session.expiresAt } : null;
+  return account
+    ? { account, expiresAt: session.expiresAt, sessionHash: session._id }
+    : null;
 }
 export async function requireSession() {
   const session = await currentSession();

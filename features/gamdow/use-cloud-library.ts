@@ -3,8 +3,19 @@ import { useEffect, useRef, useState } from "react";
 import type { LibraryResponse, SaveLibraryInput } from "@/types/api";
 import { libraryRepository } from "@/services/library-repository";
 import { ApiError } from "@/services/http-client";
+export interface ServerOperationControl {
+  cancelled: () => boolean;
+  report: (message: string) => void;
+}
+export type RunServerOperation = <T>(
+  operation: (revision: number, control: ServerOperationControl) => Promise<T>,
+  label?: string,
+) => Promise<T>;
 export function useCloudLibrary(initial: LibraryResponse) {
   const [data, setData] = useState(initial.snapshot);
+  const [externalMessage, setExternalMessage] = useState("");
+  const external = useRef(false);
+  const cancelRequested = useRef(false);
   const [status, setStatus] = useState<"saved" | "saving" | "error">("saved");
   const [error, setError] = useState("");
   const [code, setCode] = useState("");
@@ -70,7 +81,58 @@ export function useCloudLibrary(initial: LibraryResponse) {
     if (dirty) window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+  const runServerOperation: RunServerOperation = async (
+    operation,
+    label = "Updating your archive…",
+  ) => {
+    if (external.current || inFlight.current || data !== saved.current || error)
+      throw new Error(
+        "Wait until your changes are saved before syncing Steam.",
+      );
+    external.current = true;
+    cancelRequested.current = false;
+    setExternalMessage(label);
+    try {
+      return await operation(revision.current, {
+        cancelled: () => cancelRequested.current,
+        report: setExternalMessage,
+      });
+    } finally {
+      // A failed request may still have committed. Reload the authoritative revision before editing again.
+      try {
+        const result = await libraryRepository.load();
+        if (result.snapshot.profile.id !== data.profile.id)
+          throw new Error(
+            "Your signed-in account changed. Reload to continue.",
+          );
+        saved.current = result.snapshot;
+        revision.current = result.revision;
+        attempt.current = null;
+        if (mounted.current) {
+          setData(result.snapshot);
+          setStatus("saved");
+          setError("");
+          setCode("");
+        }
+      } catch {
+        if (mounted.current) {
+          setError(
+            "Could not reload after the Steam operation. Reload before editing to avoid a conflict.",
+          );
+          setCode("REVISION_CONFLICT");
+          setStatus("error");
+        }
+      }
+      external.current = false;
+      if (mounted.current) setExternalMessage("");
+    }
+  };
   return {
+    runServerOperation,
+    externalMessage,
+    cancelExternal: () => {
+      cancelRequested.current = true;
+    },
     data,
     setData,
     dirty,
