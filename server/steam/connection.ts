@@ -50,6 +50,14 @@ export function publicJob(
     errors,
     startedAt,
     completedAt,
+    mode,
+    phase,
+    outcome,
+    achievementTotal,
+    achievementProcessed,
+    achievementSynced,
+    achievementUnavailable,
+    achievementUnsupported,
   } = job;
   return {
     id,
@@ -63,6 +71,14 @@ export function publicJob(
     errors,
     startedAt,
     completedAt,
+    mode,
+    phase,
+    outcome,
+    achievementTotal,
+    achievementProcessed,
+    achievementSynced,
+    achievementUnavailable,
+    achievementUnsupported,
   };
 }
 export async function beginConnection(userId: string, sessionHash: string) {
@@ -220,6 +236,7 @@ export async function disconnectSteam(userId: string) {
         generation: connection.generation,
       });
     }
+    await db.steamOwnedLibraries.deleteOne({ _id: userId });
     await db.steamState.deleteMany({ userId });
   });
 }

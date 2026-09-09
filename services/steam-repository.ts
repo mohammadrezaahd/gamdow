@@ -2,6 +2,9 @@ import { apiRequest } from "./http-client";
 import type { LibraryResponse } from "@/types/api";
 import type {
   SteamConnection,
+  SteamLibraryPage,
+  SteamLibraryFilter,
+  SteamSyncStart,
   SteamGameDetails,
   SteamSearchResult,
   SteamSyncResult,
@@ -39,7 +42,27 @@ export const steamRepository = {
       : apiRequest<SteamGameDetails>(`/api/steam/games/${appId}`, {
           signal: AbortSignal.timeout(60000),
         }),
-  startSync: () => post<SteamSyncResult>("sync", { action: "start" }),
+  library: (
+    query = "",
+    filter: SteamLibraryFilter = "all",
+    offset = 0,
+    refresh = false,
+    signal?: AbortSignal,
+  ) =>
+    apiRequest<SteamLibraryPage>(
+      `/api/steam/library?q=${encodeURIComponent(query)}&filter=${filter}&offset=${offset}`,
+      {
+        method: refresh ? "POST" : "GET",
+        signal: signal ?? AbortSignal.timeout(60000),
+      },
+    ),
+  startSync: (
+    input: SteamSyncStart = { mode: "sync", requestId: crypto.randomUUID() },
+  ) =>
+    post<SteamSyncResult>("sync", {
+      ...input,
+      action: input.mode === "import" ? "import" : "start",
+    }),
   continueSync: (jobId: string) =>
     post<SteamSyncResult>("sync", { action: "continue", jobId }),
   cancelSync: (jobId: string) =>

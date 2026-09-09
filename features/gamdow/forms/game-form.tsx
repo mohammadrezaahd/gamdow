@@ -1,4 +1,5 @@
 "use client";
+import { SteamLibraryImport } from "../steam/steam-library-import";
 import { SteamPicker } from "../steam/steam-picker";
 import { GameImage } from "@/components/game-image";
 import { TagField } from "@/components/ui/tag-field";
@@ -50,7 +51,7 @@ export function GameForm({
   onClose: () => void;
 }) {
   const { data, saveGame, saveCollection } = useLibrary();
-  const [mode, setMode] = useState<"steam" | "manual">(
+  const [mode, setMode] = useState<"steam" | "manual" | "import">(
     game ? "manual" : "steam",
   );
   const [draft, setDraft] = useState<GameInput>(game ?? empty);
@@ -91,6 +92,8 @@ export function GameForm({
     });
     onClose();
   }
+  if (!game && mode === "import")
+    return <SteamLibraryImport onClose={() => setMode("steam")} />;
   if (!game && mode === "steam")
     return (
       <Dialog open onClose={onClose} fullWidth maxWidth="md">
@@ -100,6 +103,9 @@ export function GameForm({
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
+          <Button variant="contained" onClick={() => setMode("import")}>
+            Import from Steam
+          </Button>
           <Button variant="outlined" onClick={() => setMode("manual")}>
             Add manually
           </Button>

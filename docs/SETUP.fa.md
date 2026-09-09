@@ -2,9 +2,9 @@
 
 ## شاخه و انتشار
 
-کد بک‌اند روی `server` است؛ `main` نسخهٔ فرانت را نگه می‌دارد. اسلش ابتدای `/server` نام معتبر شاخهٔ Git نیست.
+بک‌اند و integration اولیهٔ Steam اکنون در `main` مرج شده‌اند. تغییرات Import انتخابی و Sync تکمیلی در شاخهٔ `steam-import` هستند.
 
-اگر پروژهٔ فعلی Vercel از `main` دیپلوی می‌شود، برای شروع از Preview شاخهٔ `server` استفاده کن یا یک پروژهٔ جدا به همین ریپو متصل کن. برای انتشار نهایی، Production Branch آن پروژه را روی `server` تنظیم کن. صرف پوش این شاخه نباید جای Production فعلی را عوض کند.
+اگر پروژهٔ فعلی Vercel از `main` دیپلوی می‌شود، برای بررسی این تغییرات از Preview شاخهٔ `steam-import` استفاده کن یا یک پروژهٔ جدا به همین ریپو متصل کن. پس از بررسی می‌توانی PR را مرج کنی؛ صرف پوش این شاخه جای Production روی main را عوض نمی‌کند.
 
 در Vercel: Framework = Next.js، Node.js = 22.x یا 24.x، Build Command = `npm run build`، Install = `npm ci`، Output Directory پیش‌فرض. APIها Node.js هستند؛ نیازی به سرور Express، اجرای دائمی Node یا Docker روی Vercel نیست.
 

@@ -64,6 +64,20 @@ export function GameCard({
                 "linear-gradient(180deg, #0003, transparent 40%, #0009)",
             }}
           />
+          {game.source === "STEAM" && (
+            <Chip
+              label="Steam"
+              size="small"
+              sx={{
+                position: "absolute",
+                top: 10,
+                left: 10,
+                background: "#111311c9",
+                color: "#eeeee5",
+                fontSize: 9,
+              }}
+            />
+          )}
           <Chip
             label={game.status}
             size="small"

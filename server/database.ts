@@ -9,6 +9,7 @@ import type {
   SteamSchemaDocument,
   SteamJobDocument,
   SteamStateDocument,
+  SteamOwnedLibraryDocument,
 } from "./steam/models";
 import { config } from "./config";
 export interface AccountDocument {
@@ -73,6 +74,9 @@ export async function database() {
     "steam_achievement_schemas",
   );
   const steamJobs = db.collection<SteamJobDocument>("steam_sync_jobs");
+  const steamOwnedLibraries = db.collection<SteamOwnedLibraryDocument>(
+    "steam_owned_libraries",
+  );
   const steamState = db.collection<SteamStateDocument>("steam_state");
   state.gamdowIndexes ??= Promise.all([
     catalog.createIndex({ type: 1, searchName: 1 }),
@@ -81,6 +85,10 @@ export async function database() {
     steamUserGames.createIndex(
       { userId: 1, generation: 1, steamAppId: 1 },
       { unique: true },
+    ),
+    steamOwnedLibraries.createIndex(
+      { expiresAt: 1 },
+      { expireAfterSeconds: 0 },
     ),
     steamState.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     accounts.createIndex({ email: 1 }, { unique: true }),
@@ -106,5 +114,6 @@ export async function database() {
     steamSchemas,
     steamJobs,
     steamState,
+    steamOwnedLibraries,
   };
 }

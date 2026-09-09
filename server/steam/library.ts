@@ -28,9 +28,18 @@ export async function ownedGames(steamId: string): Promise<OwnedGame[]> {
             z.object({
               appid: appIdSchema,
               name: z.string().max(2000).optional(),
+              img_icon_url: z
+                .string()
+                .regex(/^(?:[a-f0-9]{40})?$/i)
+                .optional(),
               playtime_forever: z.number().int().nonnegative().optional(),
               playtime_2weeks: z.number().int().nonnegative().optional(),
-              rtime_last_played: z.number().int().nonnegative().optional(),
+              rtime_last_played: z
+                .number()
+                .int()
+                .nonnegative()
+                .max(253402300799)
+                .optional(),
             }),
           )
           .max(50000)
@@ -40,7 +49,7 @@ export async function ownedGames(steamId: string): Promise<OwnedGame[]> {
   );
   if (
     response.game_count === undefined ||
-    (response.game_count > 0 && !response.games)
+    (response.game_count > 0 && !response.games?.length)
   )
     throw new HttpError(
       403,
@@ -122,7 +131,14 @@ export async function unlinkGame(account: AccountDocument, gameId: string) {
     g.id === gameId
       ? {
           ...g,
-          ...(original ?? { coverImage: "", heroImage: "" }),
+          ...(original
+            ? {
+                heroImage: undefined,
+                releaseYear: undefined,
+                releaseDate: undefined,
+                ...original,
+              }
+            : { coverImage: "", heroImage: "" }),
           source: "MANUAL",
           steamAppId: undefined,
           originalManualMetadata: undefined,

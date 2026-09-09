@@ -76,7 +76,19 @@ export interface SteamSyncResult {
   existing: number;
   skipped: number;
   failed: number;
-  errors: { steamAppId: number; message: string }[];
+  errors: {
+    steamAppId: number;
+    message: string;
+    stage?: "library" | "achievements";
+  }[];
+  mode?: "import" | "sync";
+  phase?: "library" | "achievements";
+  outcome?: "success" | "partial_success" | "failed";
+  achievementTotal?: number;
+  achievementProcessed?: number;
+  achievementSynced?: number;
+  achievementUnavailable?: number;
+  achievementUnsupported?: number;
   startedAt: string;
   completedAt?: string;
 }
@@ -96,3 +108,43 @@ export interface SteamGameDetails {
   achievements: SteamAchievementProgress;
   warning?: string;
 }
+
+export type SteamLibraryFilter = "all" | "imported" | "new";
+export interface SteamLibraryItem {
+  steamAppId: number;
+  name: string;
+  image: string;
+  totalMinutes?: number;
+  recentMinutes?: number;
+  lastPlayedAt?: string;
+  imported: boolean;
+  gameId?: string;
+}
+export interface SteamLibraryPage {
+  snapshotId: string;
+  revision: number;
+  fetchedAt: string;
+  stale: boolean;
+  total: number;
+  matching: number;
+  offset: number;
+  hasMore: boolean;
+  items: SteamLibraryItem[];
+}
+export type SteamImportSelection =
+  | { kind: "selected"; appIds: number[] }
+  | {
+      kind: "all";
+      query: string;
+      filter: SteamLibraryFilter;
+      excludedAppIds: number[];
+    };
+export type SteamSyncStart =
+  | { mode: "sync"; requestId: string }
+  | {
+      mode: "import";
+      requestId: string;
+      snapshotId: string;
+      revision: number;
+      selection: SteamImportSelection;
+    };

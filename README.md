@@ -1,4 +1,4 @@
-# gamdow — server branch
+# gamdow
 
 Personal game archive built with Next.js App Router, TypeScript, MUI, MongoDB and private Vercel Blob. Functional components and the existing dark theme are preserved. New accounts start empty; there is no seeded user, fake game data or browser database.
 
@@ -26,7 +26,7 @@ Open `http://localhost:3000`, register your own account, and add a game. In Comp
 
 ## Vercel / GitHub
 
-Use branch **`server`**. `main` retains the frontend prototype. Read [the Persian setup guide](docs/SETUP.fa.md) before configuring Vercel. The standard Vercel build is `npm run build`, with Node.js 22.x or 24.x, and no static-export setting.
+Preview the library import changes from branch **`steam-import`**. This branch builds on the Steam integration already merged into `main`. Read [the Persian setup guide](docs/SETUP.fa.md) before configuring Vercel. The standard Vercel build is `npm run build`, with Node.js 22.x or 24.x, and no static-export setting.
 
 Create an Atlas database/user and a **private** Vercel Blob store. Add the values from `.env.prod.example` to Vercel Environment Variables. Real `.env.local` and `.env.prod` are ignored by Git. No real credentials are included.
 
@@ -56,6 +56,6 @@ See [API and data model](docs/API.md) and [verification notes](docs/VERIFICATION
 ## Steam integration
 
 Steam metadata, manual games, verified Steam account connection, resumable library sync,
-playtime and achievements are supported on the `steam` branch. See
+playtime and achievements are supported. The `steam-import` branch adds a paginated owned-library preview, selected/all import, explicit manual linking, and separate resumable updates for imported games and achievements. See
 [Steam setup and architecture (فارسی)](docs/STEAM.fa.md) before deployment, including
 initial catalog import, migration compatibility and the required server-only environment variables.
