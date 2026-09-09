@@ -69,3 +69,49 @@ performed. Configure the destination environment and complete these deployment c
    cropped user uploads still use the existing private media flow.
 7. Verify the server collections/indexes with Compass, the scheduled catalog route with
    `CRON_SECRET`, and the appearance on desktop and mobile in the deployed application.
+
+## Selective Steam import (`steam-import`)
+
+This change passed 20 executable service/route regression groups, 8 React interaction/hook
+regression groups, the existing personal-write serialization regression, TypeScript, and
+`npm run build`. Scripts and tooling remain outside the repository.
+
+Service/route checks execute the actual Steam client/services, Mongo lease logic, storage
+projection/CAS code and handlers against an isolated in-memory collection adapter and
+controlled upstream responses. Covered: preview without import; cached reads and refresh
+cooldown; pagination/search/imported flags; all-matching selection with exclusions; selected
+import; request replay; wrong snapshot/revision/generation and forged App IDs; active job
+conflicts/cancel; ownership and CSRF; sync-only behavior; preservation of manual data,
+reviews/scores/tags/notes/dates/ordering/collections; per-app failures and DLC exclusion;
+private versus empty libraries; separate achievement schemas/unlocks; unsupported/private
+achievement outcomes; two-detail/40-association limits; one achievement game per invocation;
+local and upstream HTTP 429 pause; CAS conflict recovery; lost-checkpoint replay; explicit
+manual link/unlink; disconnect cleanup; and not resurrecting entries deleted during sync.
+
+The manual unlink check exposed and fixed a bug where absent optional fields in the saved
+manual metadata could leave Steam's banner/year on the restored manual game. The upstream
+429 check also verifies that throttling is not converted to a permanent per-game failure or
+written into the negative metadata cache.
+
+React checks exercise the actual import component and shared sync hook with host-control
+and repository adapters: selection across pages, exclusions, search, Select None, individual
+import, explicit Import All confirmation, manual link confirmation, revision invalidation,
+private/disconnected states, the existing query-based Profile URL, and achievement-phase
+progress. These are behavior checks, not visual MUI/browser testing.
+
+Live Steam sign-in/library visibility, actual MongoDB indexes/concurrency, Vercel deployment
+and visual browser inspection were not performed for this change. Existing auth/upload/
+crop/DnD implementations were retained; they were not all re-executed against live services.
+
+Before promoting the branch, verify on its Vercel Preview with the destination environment:
+
+1. Connect via Profile → Steam; preview the owned list without changing Collection.
+2. Select games on multiple pages, exclude one, import, pause/resume and check result counts.
+3. Try Import All under a search filter and verify the explicit confirmation explains its scope.
+4. Run Sync imported games after cooldown; newly purchased or removed entries must not be added.
+5. Confirm actual playtime/achievement visibility, private/unsupported states, and unchanged
+   personal scores, reviews, notes, gallery, manual progress and order.
+6. Link/unlink a manual game with an uploaded cover and no original banner; confirm the
+   original artwork returns and no Steam CDN image becomes a manual-upload reference.
+7. Inspect the new `steam_owned_libraries` TTL index in Compass; disconnect must remove
+   this account's preview and Steam stats while retaining its personal archive.

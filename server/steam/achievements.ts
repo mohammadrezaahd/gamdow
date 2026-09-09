@@ -114,6 +114,7 @@ export async function getAchievements(
   c: SteamConnectionDocument,
   appId: number,
   force = false,
+  throwOnThrottle = false,
 ): Promise<SteamAchievementProgress> {
   const db = await database();
   const id = `${c.generation}:${appId}`;
@@ -214,6 +215,12 @@ export async function getAchievements(
       });
     });
   } catch (error) {
+    if (
+      throwOnThrottle &&
+      error instanceof HttpError &&
+      (error.status === 429 || error.code === "STEAM_BUSY")
+    )
+      throw error;
     if (error instanceof HttpError && error.code === "STEAM_BUSY")
       return project(
         oldSchema,

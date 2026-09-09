@@ -27,7 +27,7 @@ npm run steam:catalog:prod
 این دستور `.env.prod` را می‌خواند و با `CRON_SECRET` به `APP_URL` درخواست می‌فرستد؛ `next start` یا deployment باید در دسترس باشد. برای سرور محلی `npm run steam:catalog` را اجرا کنید. برای Preview دارای Deployment Protection باید دسترسی آن deployment را طبق تنظیمات Vercel فراهم کنید؛ اسکریپت ورود یا redirect را دنبال نمی‌کند. بعد از توقف می‌توانید همان دستور را دوباره اجرا کنید؛ cursor در MongoDB نگهداری می‌شود.
 
 4. Cron روزانهٔ `vercel.json` کاتالوگ را به‌صورت incremental به‌روز می‌کند. زمان‌بندی روزانه با محدودیت Hobby سازگار است. هر اجرا یک صفحهٔ حداکثر ۵۰۰۰تایی می‌خواند. اگر یک pass بیش از یک صفحه باشد، اجرای بعدی ادامه می‌دهد؛ برای تکمیل فوری همان دستور bootstrap را اجرا کنید. Cron Vercel روی Production فعال می‌شود و `CRON_SECRET` را در هدر Authorization می‌فرستد.
-5. از Profile → Steam → Sign in through Steam حساب را متصل کنید؛ سپس Sync Steam library را بزنید. گذرواژه فقط در سایت خود Steam وارد می‌شود. اتصال Steam به‌معنای دسترسی به Game Details خصوصی نیست.
+5. از Profile → Steam → Sign in through Steam حساب را متصل کنید؛ سپس Browse / import Steam games را بزنید و بازی‌ها را انتخاب کنید. نیازی به واردکردن SteamID یا URL فنی نیست؛ SteamID64 از پاسخ تأییدشدهٔ خود Steam دریافت می‌شود. گذرواژه فقط در سایت خود Steam وارد می‌شود. اتصال Steam به‌معنای دسترسی به Game Details خصوصی نیست.
 
 ## مدل و سازگاری داده
 
@@ -38,6 +38,7 @@ npm run steam:catalog:prod
 | `steam_user_games`                | Playtime و unlockهای کاربر؛ کلید یکتا برای کاربر/نسل اتصال/App ID                                                |
 | `steam_achievement_schemas`       | تعریف عمومی Achievementها و تصاویرشان؛ بدون وضعیت unlock کاربر                                                   |
 | `steam_connections`               | Steam ID تأییدشده، نسل اتصال، تاریخ اتصال و آخرین sync                                                           |
+| `steam_owned_libraries` | پیش‌نمایش Owned Games، متعلق به کاربر و نسل اتصال، snapshotId و TTL بیست‌وچهارساعته |
 | `steam_sync_jobs`                 | job قابل‌ادامه، صف باقیمانده و شمارنده‌های نتیجه                                                                 |
 | `steam_state`                     | cursor کاتالوگ، leaseها، state/nonce ورود و کش کوتاه جستجو                                                       |
 | `media` + Blob / local storage    | فقط تصاویر آپلودشدهٔ خود کاربر                                                                                   |
@@ -66,7 +67,7 @@ npm run steam:catalog:prod
 
 هر batch حداکثر ۴۰ بازی فهرست‌شده در catalog یا حداکثر ۲ درخواست جزئیات برای Appهای ناشناخته پردازش می‌کند. برای بازی موجود در catalog، نام/شناسهٔ داخلی برای import کافی است و metadata کامل با بازکردن جزئیات بازی غنی می‌شود. این تصمیم از هزاران درخواست detail در یک sync جلوگیری می‌کند. کتابخانهٔ بزرگ بدون bootstrap کاتالوگ کندتر وارد می‌شود؛ ابتدا bootstrap را انجام دهید.
 
-UI صفحه‌ها را پشت‌سرهم پردازش می‌کند و نتیجه را نمایش می‌دهد. Pause پس از batch جاری متوقف می‌کند؛ بستن صفحه هم صف ذخیره‌شده را از بین نمی‌برد. Resume از همان job ادامه می‌دهد. Cancel فقط موارد باقیمانده را حذف می‌کند و بازی‌های واردشده را نگه می‌دارد. در outage و rate limit، job قابل ادامه می‌ماند. بعد از اتمام، شروع sync بعدی ۵ دقیقه cooldown دارد. حذف بازی در gamdow در sync کامل بعدی ممکن است آن بازی owned را دوباره وارد کند؛ این sync mirror حذف یا ownership revocation نیست.
+UI مرحله‌ها را پشت‌سرهم پردازش می‌کند. Pause پس از مرحلهٔ جاری متوقف می‌کند؛ بستن صفحه صف ذخیره‌شده را از بین نمی‌برد. Resume از همان job ادامه می‌دهد. Cancel فقط باقیمانده را لغو می‌کند و بازی‌های واردشده را نگه می‌دارد. محدودیت نرخ job را قابل ادامه نگه می‌دارد؛ خطای metadata یک App به‌صورت Failed ثبت می‌شود و بقیه ادامه پیدا می‌کنند. بعد از اتمام، شروع sync بعدی ۵ دقیقه cooldown دارد. Sync imported games فقط associationهای موجود را به‌روز می‌کند؛ بازی تازه یا حذف‌شده را اضافه نمی‌کند.
 
 قبل از تغییر آرشیو از Steam، ذخیرهٔ خودکار باید تمام شده باشد. هنگام عملیات، ویرایش UI موقتاً قفل و در پایان snapshot/revision سرور reload می‌شود؛ حتی اگر آخرین درخواست پس از commit پاسخ نداده باشد. write هم‌زمان در تب دیگر با CAS تشخیص داده می‌شود. Match فقط بر اساس App ID است؛ بازی Manual هم‌نام به‌صورت خودکار تبدیل نمی‌شود.
 
@@ -76,11 +77,30 @@ UI صفحه‌ها را پشت‌سرهم پردازش می‌کند و نتیج
 - `SteamPlaytime`: دقیقهٔ کل، دو هفتهٔ اخیر و زمان آخرین بازی، فقط در صورت ارائهٔ API. فیلد غایب صفر فرض نمی‌شود.
 - `SteamAchievementProgress`: نسبت unlock به تعریف Achievement؛ هرگز Story Progress فرض نمی‌شود.
 
-Achievementها هنگام مشاهدهٔ بازی و بر اساس TTL دریافت می‌شوند؛ schema عمومی یک هفته و نتیجهٔ شخصی پیش‌فرض یک ساعت cache می‌شود. بازی بدون achievement، نبود user stats، private بودن و اختلال موقت حالت‌های جدا دارند؛ در حالت private درصد صفر ساخته نمی‌شود. برای فهرست طولانی، UI ابتدا ۴۰ مورد نمایش می‌دهد. اطلاعات achievementهای مخفی تا درخواست کاربر پنهان است. تصاویر رسمی در بخش جدا از گالری شخصی نمایش داده می‌شوند.
+Achievementها بعد از مرحلهٔ Import/Playtime، حداکثر برای یک بازی در هر درخواست پردازش می‌شوند؛ هنگام مشاهدهٔ بازی نیز refresh بر اساس TTL فعال است. Refresh صریح حداقل پنج دقیقه فاصله دارد؛ schema عمومی یک هفته و نتیجهٔ شخصی پیش‌فرض یک ساعت cache می‌شود. بازی بدون achievement، نبود user stats، private بودن و اختلال موقت حالت‌های جدا دارند؛ در حالت private درصد صفر ساخته نمی‌شود. برای فهرست طولانی، UI ابتدا ۴۰ مورد نمایش می‌دهد. اطلاعات achievementهای مخفی تا درخواست کاربر پنهان است. تصاویر رسمی در بخش جدا از گالری شخصی نمایش داده می‌شوند.
 
 Disconnect نسل اتصال را باطل، job و کش شخصی Steam را حذف می‌کند. بازی‌ها و همهٔ داده‌های gamdow باقی می‌مانند. اتصال دوباره نسل جدید دارد و آمار account قبلی در UI نمایش داده نمی‌شود. یک Steam ID هم‌زمان فقط به یک حساب gamdow متصل می‌شود.
 
 محدودیت ۳MiB آرشیو شخصی قبلی حفظ شده است. متادیتای کامل Steam و فهرست Achievementها داخل این آرشیو ذخیره نمی‌شوند. رسیدن آرشیو به سقف با خطای روشن و امکان export مدیریت می‌شود؛ برای آرشیوهای بسیار بزرگ باید API snapshot موجود به pagination داده‌های شخصی ارتقا پیدا کند. این تغییر عمداً بازنویسی آن بخش نیست.
+
+## انتخاب و Import
+
+از Profile یا Add Game → Import from Steam وارد پیش‌نمایش شوید. دریافت Library به‌تنهایی هیچ Game/UserGame نمی‌سازد و metadata فروشگاه را برای تمام بازی‌ها fetch نمی‌کند. صفحه‌ها ۴۰تایی‌اند، جستجو و فیلتر روی نسخهٔ کش‌شدهٔ سرور اجرا می‌شود، و Select all matches روی تمام نتایج جستجو، نه فقط صفحهٔ فعلی، اعمال می‌شود. Select none و انتخاب تکی هم وجود دارند. Import all با تأیید صریح همهٔ بازی‌ها را مستقل از فیلتر فعلی انتخاب می‌کند.
+
+پیش‌نمایش ۲۴ ساعت با کلید کاربر و نسل اتصال نگهداری می‌شود. Refresh از Steam حداقل پنج دقیقه فاصله دارد؛ کش قدیمی با زمان دریافت و برچسب مشخص نمایش داده می‌شود. خطای private یا unavailable هرگز کش سالم را با Library خالی جایگزین نمی‌کند. پس از تغییر snapshot یا revision انتخاب‌ها پاک می‌شوند. درخواست Import دارای snapshotId و revision است؛ انتخاب منقضی/متعلق به اتصال دیگر، AppID غیرمتعلق به Library و تغییر هم‌زمان آرشیو رد می‌شوند.
+
+دو قرارداد انتخاب داریم:
+
+```ts
+{ kind: "selected", appIds: [570, 620] }
+{ kind: "all", query: "portal", filter: "new", excludedAppIds: [620] }
+```
+
+در حالت دوم، سرور انتخاب را از همان snapshot حساب محاسبه می‌کند و نیازی به ارسال همهٔ ۵۰هزار شناسه به مرورگر نیست. فیلترها `all`، `new` و `imported` هستند. `requestId` UUID یک شروع را idempotent می‌کند؛ وجود job فعال دیگر خطای `STEAM_JOB_ACTIVE` می‌دهد و UI امکان Resume/Cancel دارد.
+
+نتیجهٔ job شامل تعداد imported/already collected/failed/excluded و شمارنده‌های جدا برای achievementهای به‌روز، unsupported و private/unavailable است. نتیجهٔ نهایی `success`، `partial_success` یا `failed` است. خطاهای قابل‌نمایش حداکثر ۵۰ موردند ولی شمارنده‌ها همهٔ موارد را حساب می‌کنند. metadata بازی‌های ناموفق را با انتخاب دوباره در پیش‌نمایش و آمار را با Sync بعدی می‌توان دوباره دریافت کرد. داده‌های موفق rollback نمی‌شوند. اطلاعات شخصی موجود فقط خوانده می‌شوند؛ writeهای Playtime/Achievement در `steam_user_games` انجام می‌شوند.
+
+برای بازی دستی، دکمهٔ Link an existing manual game فهرست ورودی‌های دستی را باز می‌کند؛ کاربر مورد دقیق را انتخاب و تأیید می‌کند. هیچ تطبیق خودکار صرفاً بر اساس نام وجود ندارد. Disconnect پیش‌نمایش کش‌شده را نیز حذف می‌کند. collection جدید و index TTL به‌صورت افزایشی ساخته می‌شوند؛ هیچ reset/migration مخرب لازم نیست. jobهای قدیمی با فیلدهای اختیاری جدید همچنان قابل ادامه‌اند.
 
 ## قرارداد API
 
@@ -88,6 +108,8 @@ Disconnect نسل اتصال را باطل، job و کش شخصی Steam را ح�
 
 | مسیر                       | روش / ورودی                                      | نتیجه                                                                                            |
 | -------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `/api/steam/library` | GET `q`, `filter`, `offset` / POST همان query برای refresh | پیش‌نمایش صفحه‌ای، snapshotId، revision و imported flags |
+| `/api/steam/sync` | POST `{ action: "import", requestId, snapshotId, revision, selection }` | شروع Import انتخابی؛ همان continue/cancel برای ادامه |
 | `/api/steam/search`        | GET `q`, `offset`                                | نتایج صفحه‌ای با cover، هشدار fallback و وضعیت آمادگی catalog                                    |
 | `/api/steam/games`         | POST `{ steamAppId, revision, manualGameId? }`   | افزودن/لینک، snapshot، revision و gameId                                                         |
 | `/api/steam/unlink`        | POST `{ gameId, revision }`                      | تبدیل به Manual و بازگردانی metadata اولیه                                                       |
@@ -95,7 +117,7 @@ Disconnect نسل اتصال را باطل، job و کش شخصی Steam را ح�
 | `/api/steam/connection`    | GET / DELETE                                     | وضعیت اتصال / قطع اتصال                                                                          |
 | `/api/steam/connect`       | POST                                             | URL ورود Steam؛ ورود به gamdow را جایگزین نمی‌کند                                                |
 | `/api/steam/callback`      | GET پاسخ OpenID                                  | اعتبارسنجی و redirect به Profile با نتیجهٔ ثابت و غیرحساس                                        |
-| `/api/steam/sync`          | POST `{ action: "start" }`                       | ساخت یا یافتن job جاری                                                                           |
+| `/api/steam/sync`          | POST `{ action: "start", requestId }`            | ساخت job برای به‌روزرسانی بازی‌های واردشده                                                                           |
 | `/api/steam/sync`          | POST `{ action: "continue" \| "cancel", jobId }` | پردازش batch بعدی / لغو باقیمانده                                                                |
 | `/api/steam/catalog/sync`  | GET / POST + `Authorization: Bearer CRON_SECRET` | یک صفحهٔ catalog؛ فقط scheduler/operator                                                         |
 

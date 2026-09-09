@@ -43,6 +43,7 @@ export interface SteamSchemaDocument {
 export interface OwnedGame {
   appid: number;
   name?: string;
+  img_icon_url?: string;
   playtime_forever?: number;
   playtime_2weeks?: number;
   rtime_last_played?: number;
@@ -52,6 +53,8 @@ export interface SteamJobDocument extends SteamSyncResult {
   generation: string;
   remaining: OwnedGame[];
   initialAppIds: number[];
+  requestId?: string;
+  achievementRemaining?: number[];
 }
 export interface SteamStateDocument {
   _id: string;
@@ -65,4 +68,13 @@ export interface SteamStateDocument {
   cursor?: number;
   complete?: boolean;
   searchResult?: import("@/types/steam").SteamSearchResult;
+}
+
+export interface SteamOwnedLibraryDocument {
+  _id: string;
+  generation: string;
+  snapshotId: string;
+  fetchedAt: string;
+  expiresAt: Date;
+  games: OwnedGame[];
 }

@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   CircularProgress,
-  LinearProgress,
   Paper,
   Stack,
   Typography,
@@ -12,12 +11,17 @@ import {
 import { Button, Chip } from "@/components/ui";
 import { ConfirmDialog } from "@/components/page-parts";
 import { steamRepository } from "@/services/steam-repository";
-import type { SteamConnection, SteamSyncResult } from "@/types/steam";
+import type { SteamConnection } from "@/types/steam";
 import { useLibrary } from "../library-context";
+import { SteamLibraryImport } from "./steam-library-import";
+import { SteamSyncSummary } from "./steam-sync-result";
+import { useSteamSync, pendingSteamJob } from "./use-steam-sync";
 export function SteamConnectionPanel() {
-  const { hasUnsavedChanges, runServerOperation, notify } = useLibrary();
+  const { hasUnsavedChanges, notify } = useLibrary();
+  const flow = useSteamSync();
+  const { job, setJob } = flow;
+  const [importOpen, setImportOpen] = useState(false);
   const [connection, setConnection] = useState<SteamConnection | null>(null);
-  const [job, setJob] = useState<SteamSyncResult | undefined>();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
@@ -41,41 +45,8 @@ export function SteamConnectionPanel() {
     setCallback(new URLSearchParams(location.search).get("steam") || "");
   }, []);
   async function sync() {
-    setError("");
-    try {
-      await runServerOperation(async (_revision, control) => {
-        let current =
-          job && ["pending", "running"].includes(job.status)
-            ? job
-            : await steamRepository.startSync();
-        setJob(current);
-        while (
-          ["pending", "running"].includes(current.status) &&
-          !control.cancelled()
-        ) {
-          control.report(
-            `Syncing Steam library · ${current.processed} / ${current.total}`,
-          );
-          current = await steamRepository.continueSync(current.id);
-          setJob(current);
-          if (current.status !== "completed")
-            await new Promise((resolve) => setTimeout(resolve, 600));
-        }
-        notify(
-          current.status === "completed"
-            ? "Steam library sync finished"
-            : "Sync paused. You can resume it here.",
-        );
-      }, "Reading your Steam library…");
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Steam sync failed. You can resume the saved job.",
-      );
-    } finally {
-      await load();
-    }
+    await flow.run();
+    await load();
   }
   return (
     <Paper
@@ -160,70 +131,39 @@ export function SteamConnectionPanel() {
               Your Steam Profile and Game Details must be Public to read your
               library. Hidden playtime is shown as unavailable.
             </Typography>
-            {job && (
-              <Box role="status">
-                <Stack
-                  direction="row"
-                  sx={{ justifyContent: "space-between", mb: 1 }}
-                >
-                  <Typography variant="body2">
-                    {job.status === "completed"
-                      ? "Sync complete"
-                      : job.status === "cancelled"
-                        ? "Sync cancelled"
-                        : "Sync ready to resume"}
-                  </Typography>
-                  <Typography variant="body2">
-                    {job.processed} / {job.total}
-                  </Typography>
-                </Stack>
-                <LinearProgress
-                  variant="determinate"
-                  value={job.total ? (job.processed / job.total) * 100 : 100}
-                />
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  {job.added} added · {job.existing} already collected ·{" "}
-                  {job.skipped} excluded · {job.failed} unavailable
-                </Typography>
-                {job.errors.map((e) => (
-                  <Typography
-                    key={e.steamAppId}
-                    variant="caption"
-                    sx={{ display: "block" }}
-                    color="text.secondary"
-                  >
-                    App {e.steamAppId}: {e.message}
-                  </Typography>
-                ))}
-              </Box>
+            {flow.error && (
+              <Alert severity="error" onClose={() => flow.setError("")}>
+                {flow.error} Saved progress can be resumed.
+              </Alert>
             )}
+            {job && <SteamSyncSummary job={job} busy={flow.busy} />}
             <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1 }}>
               <Button
                 variant="contained"
                 disabled={
-                  hasUnsavedChanges || loading || !connection.configured
+                  hasUnsavedChanges ||
+                  loading ||
+                  flow.busy ||
+                  !connection.configured
+                }
+                onClick={() => setImportOpen(true)}
+              >
+                Browse / import Steam games
+              </Button>
+              <Button
+                variant="outlined"
+                disabled={
+                  hasUnsavedChanges ||
+                  loading ||
+                  flow.busy ||
+                  !connection.configured
                 }
                 onClick={sync}
               >
-                {job && ["pending", "running"].includes(job.status)
-                  ? "Resume sync"
-                  : "Sync Steam library"}
+                {pendingSteamJob(job) ? "Resume sync" : "Sync imported games"}
               </Button>
-              {job && ["pending", "running"].includes(job.status) && (
-                <Button
-                  onClick={async () => {
-                    try {
-                      await steamRepository.cancelSync(job.id);
-                      await load();
-                    } catch (e) {
-                      setError(
-                        e instanceof Error
-                          ? e.message
-                          : "Could not cancel sync.",
-                      );
-                    }
-                  }}
-                >
+              {pendingSteamJob(job) && (
+                <Button disabled={flow.busy} onClick={flow.cancel}>
                   Cancel remaining sync
                 </Button>
               )}
@@ -264,6 +204,14 @@ export function SteamConnectionPanel() {
           </Typography>
         )}
       </Stack>
+      {importOpen && (
+        <SteamLibraryImport
+          onClose={() => {
+            setImportOpen(false);
+            void load();
+          }}
+        />
+      )}
       {disconnecting && (
         <ConfirmDialog
           title="Disconnect Steam?"

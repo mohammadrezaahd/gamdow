@@ -244,7 +244,10 @@ export async function getSteamMetadata(
     });
   } catch (e) {
     if (e instanceof HttpError && e.code === "STEAM_NOT_GAME") throw e;
-    if (!(e instanceof HttpError && e.code === "STEAM_BUSY"))
+    if (!(
+      e instanceof HttpError &&
+      (e.code === "STEAM_BUSY" || e.status === 429)
+    ))
       await db.catalog.updateOne(
         { _id: appId },
         {

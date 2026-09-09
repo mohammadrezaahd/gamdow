@@ -107,6 +107,12 @@ export async function steamFetch(
         Math.max(400, Number(response.headers.get("retry-after") || 0) * 1000),
       );
       await response.body?.cancel();
+      if (response.status === 429 && attempt)
+        throw new HttpError(
+          429,
+          "Steam is rate limiting requests. Your progress is saved; wait a minute before resuming.",
+          "STEAM_RATE_LIMITED",
+        );
       if (!retry || attempt) throw unavailable();
       await new Promise((resolve) => setTimeout(resolve, delay));
     } catch (error) {
