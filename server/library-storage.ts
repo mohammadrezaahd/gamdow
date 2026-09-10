@@ -102,6 +102,7 @@ export async function libraryView(
               _id: 1,
               name: 1,
               type: 1,
+              "metadata.steamAppId": 1,
               "metadata.name": 1,
               "metadata.description": 1,
               "metadata.images": 1,

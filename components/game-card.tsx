@@ -146,14 +146,20 @@ export function GameCard({
               variant="caption"
               color="text.secondary"
               noWrap
-              sx={{ fontSize: 10 }}
+              sx={{ fontSize: 10, minWidth: 0, flex: 1 }}
             >
               {game.genres[0] || "Unsorted"}
             </Typography>
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ fontFamily: t.mono, whiteSpace: "nowrap", fontSize: 9 }}
+              noWrap
+              sx={{
+                fontFamily: t.mono,
+                fontSize: 9,
+                minWidth: 0,
+                maxWidth: "65%",
+              }}
             >
               {game.platform || "—"} / {game.releaseYear || "—"}
             </Typography>

@@ -232,7 +232,10 @@ export function AppShell({
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { md: "184px minmax(0,1fr)" },
+          gridTemplateColumns: {
+            xs: "minmax(0,1fr)",
+            md: "184px minmax(0,1fr)",
+          },
           gap: { md: 4, xl: 6 },
           mt: { xs: 3, md: 4 },
         }}

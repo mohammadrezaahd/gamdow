@@ -44,7 +44,7 @@ export function DashboardPage({
           mb: 4,
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
           <Typography variant="overline" color="text.secondary">
             THE PERSONAL COLLECTION /{" "}
             {data.preferences.displayName.toUpperCase()}
@@ -77,7 +77,10 @@ export function DashboardPage({
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { lg: "minmax(0, 2.4fr) minmax(250px, 1fr)" },
+            gridTemplateColumns: {
+              xs: "minmax(0,1fr)",
+              lg: "minmax(0, 2.4fr) minmax(250px, 1fr)",
+            },
             gap: 3,
             mb: 4,
           }}
@@ -91,6 +94,7 @@ export function DashboardPage({
             sx={{
               display: "flex",
               flexDirection: "column",
+              minWidth: 0,
               borderTop: "2px solid",
               borderColor: "primary.main",
               pt: 2,
@@ -101,6 +105,8 @@ export function DashboardPage({
               sx={{
                 justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
+                gap: 1,
                 mb: 2,
               }}
             >
@@ -128,6 +134,7 @@ export function DashboardPage({
                   src={g.coverImage}
                   sx={{
                     width: 48,
+                    flexShrink: 0,
                     height: 65,
                     objectFit: "cover",
                     borderRadius: 0.5,
@@ -138,6 +145,9 @@ export function DashboardPage({
                     onClick={() => onGame(g.id)}
                     sx={{
                       p: 0,
+                      minWidth: 0,
+                      maxWidth: "100%",
+                      overflowWrap: "anywhere",
                       color: "text.primary",
                       textAlign: "left",
                       justifyContent: "flex-start",
@@ -214,6 +224,8 @@ export function DashboardPage({
             key={label}
             sx={{
               py: 2.5,
+              minWidth: 0,
+              overflowWrap: "anywhere",
               pl: { xs: i % 2 ? 2 : 0, sm: i ? 3 : 0 },
               borderRight: i === 3 ? 0 : 1,
               borderColor: "divider",

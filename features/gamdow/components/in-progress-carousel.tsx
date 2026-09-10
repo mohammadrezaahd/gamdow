@@ -59,6 +59,8 @@ export function InProgressCarousel({
       }}
       sx={{
         minWidth: 0,
+        maxWidth: "100%",
+        position: "relative",
         outlineOffset: 5,
         "&:focus-visible": {
           outline: "2px solid",
@@ -66,7 +68,15 @@ export function InProgressCarousel({
         },
       }}
     >
-      <Box sx={{ pt: games.length > 1 ? 3 : 0, pr: games.length > 1 ? 2 : 0 }}>
+      <Box
+        sx={{
+          pt: games.length > 1 ? 3 : 0,
+          pr: games.length > 1 ? 2 : 0,
+          pb: 3,
+          mb: -3,
+          overflow: "clip",
+        }}
+      >
         <Box
           onPointerDown={(event) => {
             if (
@@ -98,6 +108,8 @@ export function InProgressCarousel({
         >
           {games.map((game, i) => {
             const depth = (i - index + games.length) % games.length;
+            // Hidden slides share a bounded transform so large libraries cannot expand the scroll area.
+            const stackDepth = Math.min(depth, 2);
             const front = depth === 0;
             return (
               <Box
@@ -119,7 +131,7 @@ export function InProgressCarousel({
                   background: "#162016",
                   boxShadow: front ? "0 20px 40px #0005" : "0 4px 16px #0005",
                   transformOrigin: "center top",
-                  transform: `translate(${depth * 7}px, ${depth * -11}px) scale(${1 - Math.min(depth, 3) * 0.025}) rotate(${depth * 1.2}deg)`,
+                  transform: `translate(${stackDepth * 7}px, ${stackDepth * -11}px) scale(${1 - stackDepth * 0.025}) rotate(${stackDepth * 1.2}deg)`,
                   transition:
                     "transform .45s cubic-bezier(.22,.8,.3,1), border-color .3s",
                   display: "flex",
@@ -226,6 +238,7 @@ export function InProgressCarousel({
             justifyContent: "space-between",
             mt: 2,
             gap: 1,
+            flexWrap: "wrap",
           }}
         >
           <Stack
