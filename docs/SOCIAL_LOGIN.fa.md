@@ -56,3 +56,38 @@ Profile → Steam player stats نام و آواتار Steam، لینک پروف�
 - Player summaries: https://partner.steamgames.com/doc/webapi/ISteamUser
 - Steam badges: https://partner.steamgames.com/doc/webapi/IPlayerService
 - Library artwork: https://partner.steamgames.com/doc/store/assets/libraryassets
+
+## ماندگاری نشست
+
+گزینهٔ «Keep me signed in on this device» در ورود ایمیلی، Google، Steam و ثبت‌نام پیش‌فرض روشن است. نشست ذخیره‌شده ۳۰ روز اعتبار دارد و هنگام استفاده از برنامه، وقتی کمتر از نصف اعتبارش باقی مانده باشد، تمدید می‌شود. سقف عمر هر نشست ۹۰ روز است. با خاموش‌کردن گزینه، کوکی فقط برای نشست مرورگر باقی می‌ماند و اعتبار سرور یک روز، با تمدید هنگام استفاده است.
+
+`POST /api/auth/session` فقط از مبدأ برنامه پذیرفته می‌شود. تمدید، کوکی HttpOnly و تاریخ انقضای MongoDB را با هم به‌روز می‌کند؛ نشست منقضی یا حذف‌شده دوباره ساخته نمی‌شود. Client هنگام بازشدن برنامه، بازگشت به تب و هر ۱۵ دقیقه در تب قابل‌مشاهده این مسیر را فراخوانی می‌کند. خطای شبکه باعث حذف داده‌های ذخیره‌نشده یا redirect اجباری نمی‌شود. نشست‌های قدیمی معتبر بدون reset قابل خواندن‌اند.
+
+## اتصال Epic Games
+
+این نسخه اتصال **هویت Epic** را به Profile اضافه می‌کند. Import کل Library، playtime و Achievementهای تمام بازی‌های Epic هنوز پیاده نشده‌اند: مستندات بررسی‌شدهٔ EAS/EOS برای هویت و دسترسی‌های محصول/Deployment هستند و مجوز عمومی معادل Steam GetOwnedGames برای برنامهٔ gamdow تأیید نشده است. Client ID/Secret به‌تنهایی این دسترسی‌ها را فراهم نمی‌کنند. قابلیت‌های مربوطه در DTO به‌صورت `false` گزارش می‌شوند؛ دکمهٔ Sync نمایشی یا نتیجهٔ جعلی نداریم. بازی‌های Epic را همچنان می‌توان دستی ثبت کرد.
+
+در Epic Developer Portal برای **خود gamdow** برنامهٔ Epic Account Services و OAuth client محرمانه بساز، دسترسی Basic Profile و اتصال client به برنامه را تنظیم کن و الزامات انتشار/Brand Review را برای استفادهٔ کاربران خارج از تیم تکمیل کن. برای هر محیط، Redirect URI دقیق را ثبت کن:
+
+```text
+https://YOUR_PROJECT.vercel.app/api/epic/callback
+```
+
+متغیرهای زیر فقط در Server/Vercel تنظیم شوند (نمونه‌های env هم به‌روز شده‌اند):
+
+```dotenv
+EPIC_CLIENT_ID=YOUR_GAMDOW_EPIC_CLIENT_ID
+EPIC_CLIENT_SECRET=YOUR_GAMDOW_EPIC_CLIENT_SECRET
+```
+
+`APP_URL` باید مبدأ همان محیط باشد. برای توسعه، callback برابر `http://localhost:3000/api/epic/callback` است. خالی‌بودن کلیدهای Epic مانع کارکرد بقیهٔ برنامه نمی‌شود. بعد از تنظیم env، Redeploy کن.
+
+فقط شناسهٔ تأییدشده، نام و زمان اتصال در `epic_connections` ذخیره می‌شود؛ access/refresh token نگهداری یا به Client ارسال نمی‌شود. callback به کاربر، نشست جاری، cookie مرورگر و state یک‌بارمصرف متصل است. قطع اتصال، درخواست‌های معلق را باطل می‌کند و Collection را حذف نمی‌کند. برای لغو مجوز در خود Epic نیز کاربر می‌تواند از تنظیمات Apps and Accounts حساب Epic استفاده کند.
+
+منابع پیاده‌سازی و بررسی قابلیت‌ها:
+- Discovery رسمی Epic: https://api.epicgames.dev/epic/oauth/v2/.well-known/openid-configuration
+- راهنمای دسترسی اطلاعات حساب: https://www.epicgames.com/help/c-45487929/c-40721840/a12351724
+- تفکیک EAS/EOS و تنظیم Product/Deployment: https://dev.epicgames.com/documentation/unreal-engine/enable-and-configure-online-services-eos-in-unreal-engine
+- نمونهٔ OAuth client و Basic Profile: https://v2.arcticjs.dev/providers/epicgames
+
+اتصال واقعی Epic به تنظیمات و تأیید برنامه در Epic نیاز دارد؛ بررسی فعلی با پاسخ‌های کنترل‌شده انجام شده است.

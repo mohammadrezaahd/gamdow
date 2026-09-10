@@ -1,4 +1,5 @@
 "use client";
+import { PlaytimeControl } from "./components/playtime-control";
 import { SteamGamePanel } from "./steam/steam-game-panel";
 import type { SteamMetadata } from "@/types/steam";
 import { DateField } from "@/components/ui";
@@ -256,14 +257,7 @@ export function GameDetail({
                   {game.plannedAt ? ` · ${game.plannedAt}` : ""}
                 </Typography>
               </Paper>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="caption">Time played</Typography>
-                <Typography>
-                  {game.hoursPlayed === undefined
-                    ? "Not recorded"
-                    : `${game.hoursPlayed} hours`}
-                </Typography>
-              </Paper>
+              <PlaytimeControl game={game} />
             </Box>
             <Typography color="text.secondary">
               Started: {game.startedAt || "Not recorded"} · Finished:{" "}

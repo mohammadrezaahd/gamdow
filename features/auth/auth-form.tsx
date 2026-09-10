@@ -23,7 +23,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     email: "",
     password: "",
     confirmPassword: "",
-    rememberMe: false,
+    rememberMe: true,
   });
   const field = <K extends keyof AuthFormValues>(
     key: K,
@@ -44,6 +44,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         try {
           if (registering)
             await authRepository.register({
+              rememberMe: values.rememberMe,
               displayName: values.displayName,
               email: values.email,
               password: values.password,
@@ -115,17 +116,15 @@ export function AuthForm({ mode }: AuthFormProps) {
             onChange={(e) => field("confirmPassword", e.target.value)}
           />
         )}
-        {!registering && (
-          <FormControlLabel
-            label="Remember me"
-            control={
-              <Checkbox
-                checked={values.rememberMe}
-                onChange={(_, checked) => field("rememberMe", checked)}
-              />
-            }
-          />
-        )}
+        <FormControlLabel
+          label="Keep me signed in on this device"
+          control={
+            <Checkbox
+              checked={values.rememberMe}
+              onChange={(_, checked) => field("rememberMe", checked)}
+            />
+          }
+        />
         <Button
           disabled={busy}
           type="submit"

@@ -11,6 +11,7 @@ import type {
   SteamStateDocument,
   SteamOwnedLibraryDocument,
 } from "./steam/models";
+import type { EpicConnectionDocument } from "./epic/connection";
 import { config } from "./config";
 export interface AccountDocument {
   _id: string;
@@ -25,6 +26,8 @@ export interface AccountDocument {
   lastMutationId?: string;
 }
 export interface SessionDocument {
+  remember?: boolean;
+  createdAt?: Date;
   _id: string;
   userId: string;
   expiresAt: Date;
@@ -41,7 +44,7 @@ export interface MediaDocument {
 }
 export interface AuthFlowDocument {
   _id: string;
-  provider: "google" | "steam";
+  provider: "google" | "steam" | "epic";
   browserHash: string;
   nonce: string;
   verifier: string;
@@ -74,6 +77,8 @@ export async function database() {
       throw error;
     });
   const db = (await state.gamdowMongo).db(c.dbName);
+  const epicConnections =
+    db.collection<EpicConnectionDocument>("epic_connections");
   const authFlows = db.collection<AuthFlowDocument>("auth_flows");
   const accounts = db.collection<AccountDocument>("accounts");
   const sessions = db.collection<SessionDocument>("sessions");
@@ -93,6 +98,7 @@ export async function database() {
   );
   const steamState = db.collection<SteamStateDocument>("steam_state");
   state.gamdowIndexes ??= Promise.all([
+    epicConnections.createIndex({ accountId: 1 }, { unique: true }),
     authFlows.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     catalog.createIndex({ type: 1, searchName: 1 }),
     catalog.createIndex({ type: 1, searchTokens: 1, _id: 1 }),
@@ -121,6 +127,7 @@ export async function database() {
     });
   await state.gamdowIndexes;
   return {
+    epicConnections,
     authFlows,
     accounts,
     sessions,

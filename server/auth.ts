@@ -69,7 +69,7 @@ export async function authenticate(request: Request, register: boolean) {
     }
     const expiresAt = await createSession(
       account._id,
-      input.rememberMe ?? false,
+      input.rememberMe ?? true,
     );
     return json(
       { user: account.snapshot.profile, expiresAt: expiresAt.toISOString() },

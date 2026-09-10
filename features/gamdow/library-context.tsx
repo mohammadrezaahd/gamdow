@@ -1,4 +1,5 @@
 "use client";
+import { adjustPlaytime, MAX_PLAYTIME_HOURS } from "@/lib/playtime";
 import type { ProfileInput } from "@/types/profile";
 import { normalizeTags } from "@/lib/tags";
 import { Button } from "@/components/ui";
@@ -49,6 +50,7 @@ interface LibraryContextValue {
   notify: (message: string) => void;
   reorderGames: (games: Game[]) => void;
   saveGame: (game: Game) => void;
+  adjustGamePlaytime: (id: string, deltaMinutes: number) => void;
   deleteGame: (id: string) => void;
   saveCollection: (collection: GameCollection) => void;
   deleteCollection: (id: string) => void;
@@ -129,6 +131,24 @@ export function LibraryProvider({
         }),
       );
       notify("Game updated");
+    },
+    adjustGamePlaytime: (id, deltaMinutes) => {
+      setData((current) => ({
+        ...current,
+        games: current.games.map((game) => {
+          if (game.id !== id) return game;
+          const nextMinutes =
+            Math.round((game.hoursPlayed ?? 0) * 60) + deltaMinutes;
+          if (nextMinutes < 0 || nextMinutes > MAX_PLAYTIME_HOURS * 60)
+            return game;
+          return {
+            ...game,
+            hoursPlayed: adjustPlaytime(game.hoursPlayed, deltaMinutes),
+            updatedAt: new Date().toISOString(),
+          };
+        }),
+      }));
+      notify("Recorded playtime updated");
     },
     deleteGame: (id) => {
       setData((d) => ({

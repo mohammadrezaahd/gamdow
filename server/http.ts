@@ -56,7 +56,10 @@ export function sameOrigin(request: Request) {
       "INVALID_ORIGIN",
     );
 }
-export async function readBytes(request: Request, max: number) {
+export async function readBytes(
+  request: Pick<Request, "headers" | "body">,
+  max: number,
+) {
   if (Number(request.headers.get("content-length")) > max)
     throw new HttpError(413, "Request is too large.");
   const reader = request.body?.getReader();

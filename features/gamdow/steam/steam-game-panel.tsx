@@ -41,6 +41,7 @@ export function SteamGamePanel({
       setDetails(null);
       return;
     }
+    setDetails(null);
     setLoading(true);
     setError("");
     steamRepository
@@ -129,14 +130,25 @@ export function SteamGamePanel({
             </Typography>
             <Typography variant="h5">Beyond your play journal</Typography>
           </Box>
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1 }}>
+            {details?.ownership?.state === "owned" && (
+              <Button
+                component="a"
+                variant="contained"
+                href={`steam://run/${game.steamAppId}`}
+              >
+                Play in Steam
+              </Button>
+            )}
             <Button
               component="a"
               href={`https://store.steampowered.com/app/${game.steamAppId}/`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Steam store ↗
+              {details?.ownership?.state === "not_owned" && m && !m.isFree
+                ? "Purchase on Steam ↗"
+                : "Steam store ↗"}
             </Button>
             <Button
               disabled={loading || hasUnsavedChanges}
@@ -161,6 +173,18 @@ export function SteamGamePanel({
             </Button>
           </Stack>
         </Stack>
+        {details?.ownership?.state === "owned" && (
+          <Typography variant="caption" color="text.secondary">
+            Opens the Steam app on this device. Steam must be installed and
+            signed in to the account that owns this game.
+          </Typography>
+        )}
+        {details?.ownership?.state === "not_owned" && (
+          <Typography variant="caption" color="text.secondary">
+            This game was not found in your connected account’s latest Steam
+            library. Purchases are completed on Steam.
+          </Typography>
+        )}
         {loading && (
           <Stack direction="row" spacing={1} role="status">
             <CircularProgress size={20} />

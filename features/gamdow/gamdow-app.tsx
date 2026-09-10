@@ -1,4 +1,5 @@
 "use client";
+import { SessionKeepAlive } from "@/features/auth/session-keep-alive";
 import { SteamAutoSync } from "./steam/steam-auto-sync";
 import { useEffect, useState } from "react";
 import { LinearProgress } from "@mui/material";
@@ -95,6 +96,7 @@ function AppContent() {
       name={data.profile.displayName}
       avatarImage={data.profile.avatarImage}
     >
+      <SessionKeepAlive />
       <SteamAutoSync />
       {!ready ? (
         <LinearProgress aria-label="Loading your library" />

@@ -1,4 +1,5 @@
 import "server-only";
+import { fresh } from "./client";
 import { withSteamLock } from "./locks";
 import type { AccountDocument } from "../database";
 import { database } from "../database";
@@ -37,6 +38,7 @@ export async function steamGameDetails(
       metadata: null,
       metadataStale: false,
       connected: !!c,
+      ownership: { state: "unknown" },
       playtime: null,
       warning: activityWarning,
       achievements: {
@@ -56,6 +58,18 @@ export async function steamGameDetails(
           : "Steam metadata is unavailable. Your personal data is unchanged.";
     }
     if (c) {
+      const library = await db.steamOwnedLibraries.findOne({
+        _id: account._id,
+        generation: c.generation,
+        expiresAt: { $gt: new Date() },
+      });
+      if (!activityWarning && library && fresh(library.fetchedAt, 1 / 12))
+        result.ownership = {
+          state: library.games.some((g) => g.appid === appId)
+            ? "owned"
+            : "not_owned",
+          checkedAt: library.fetchedAt,
+        };
       const saved = await db.steamUserGames.findOne({
         _id: `${c.generation}:${appId}`,
       });
@@ -83,6 +97,7 @@ export async function steamGameDetails(
           )?.playtime ?? null;
       else {
         result.connected = false;
+        result.ownership = { state: "unknown" };
         result.achievements = { state: "not_synced", items: [] };
       }
     }

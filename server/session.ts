@@ -21,7 +21,13 @@ export async function currentSession() {
   if (!session) return null;
   const account = await db.accounts.findOne({ _id: session.userId });
   return account
-    ? { account, expiresAt: session.expiresAt, sessionHash: session._id }
+    ? {
+        account,
+        expiresAt: session.expiresAt,
+        sessionHash: session._id,
+        remember: session.remember ?? true,
+        createdAt: session.createdAt,
+      }
     : null;
 }
 export async function requireSession() {
@@ -38,7 +44,13 @@ export async function createSession(userId: string, remember: boolean) {
   const token = randomBytes(32).toString("hex");
   const lifetime = (remember ? 30 : 1) * 86400;
   const expiresAt = new Date(Date.now() + lifetime * 1000);
-  await db.sessions.insertOne({ _id: tokenHash(token), userId, expiresAt });
+  await db.sessions.insertOne({
+    _id: tokenHash(token),
+    userId,
+    expiresAt,
+    remember,
+    createdAt: new Date(),
+  });
   jar.set(cookieName(), token, {
     httpOnly: true,
     secure: secure(),
@@ -61,4 +73,40 @@ export async function deleteSession() {
     path: "/",
     maxAge: 0,
   });
+}
+
+/** Cookie writes only run in a Route Handler, never during Server Component rendering. */
+export async function renewSession() {
+  const session = await requireSession();
+  const now = Date.now();
+  const lifetime = (session.remember ? 30 : 1) * 86400;
+  const createdAt = session.createdAt ?? new Date(now);
+  const absoluteExpiry = createdAt.getTime() + 90 * 86400000;
+  if (session.expiresAt.getTime() - now > (lifetime * 1000) / 2) return session;
+  const expiresAt = new Date(Math.min(now + lifetime * 1000, absoluteExpiry));
+  if (expiresAt <= new Date(now))
+    throw new HttpError(401, "Please log in again.", "UNAUTHENTICATED");
+  const jar = await cookies();
+  const token = jar.get(cookieName())?.value;
+  if (!token || tokenHash(token) !== session.sessionHash)
+    throw new HttpError(401, "Please log in again.", "UNAUTHENTICATED");
+  const result = await (
+    await database()
+  ).sessions.updateOne(
+    { _id: session.sessionHash, expiresAt: { $gt: new Date(now) } },
+    { $max: { expiresAt }, $set: { remember: session.remember, createdAt } },
+  );
+  // A concurrent logout must never be undone by renewal.
+  if (!result.matchedCount)
+    throw new HttpError(401, "Please log in again.", "UNAUTHENTICATED");
+  jar.set(cookieName(), token, {
+    httpOnly: true,
+    secure: secure(),
+    sameSite: "lax",
+    path: "/",
+    ...(session.remember
+      ? { maxAge: Math.floor((expiresAt.getTime() - now) / 1000) }
+      : {}),
+  });
+  return { ...session, expiresAt };
 }

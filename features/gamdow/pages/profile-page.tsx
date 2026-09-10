@@ -1,4 +1,5 @@
 "use client";
+import { EpicConnectionPanel } from "../epic/epic-connection";
 import { SocialLogin } from "@/features/auth/social-login";
 import { SteamProfilePanel } from "../steam/steam-profile-panel";
 import { SteamConnectionPanel } from "../steam/steam-connection";
@@ -140,6 +141,7 @@ export function ProfilePage() {
       </Box>
       <SteamConnectionPanel />
       <SteamProfilePanel />
+      <EpicConnectionPanel />
       <Paper sx={{ p: 3, mb: 3 }}>
         <SocialLogin linkGoogle disabled={hasUnsavedChanges} />
       </Paper>

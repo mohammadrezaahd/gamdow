@@ -36,3 +36,15 @@ Schema validation is in `lib/library-schema.ts`. The aggregate is bounded to 3 M
 ## Deployment and access
 
 `/` verifies the database-backed session in a Server Component. Every API independently checks authorization; hiding client pages is not relied upon. `/login` and `/register` redirect authenticated users to the dashboard. MongoDB uses one cached client per process and small connection pools suitable for serverless instances. Index initialization is idempotent, resettable after failure, and occurs at runtime so builds require no database connection.
+
+## Session renewal and Epic identity
+
+- `POST /api/auth/session`: same-origin, authenticated sliding renewal. Returns the existing AuthSession DTO; never creates a session for an expired/missing token.
+- `GET /api/epic/connection`: authenticated EpicConnection DTO with configuration, verified identity and explicit capability flags.
+- `POST /api/epic/connect`: same-origin, authenticated, rate limited. Returns an Epic authorization URL bound to the current session/browser.
+- `GET /api/epic/callback`: consumes the one-use flow and exchanges the code server-side, then redirects to Profile with a fixed result code.
+- `DELETE /api/epic/connection`: same-origin, authenticated. Cancels pending links and removes only the Epic association.
+
+Epic capabilities currently report `libraryImport: false`, `playtime: false`, `achievements: false`. There is no cross-game Epic sync endpoint; official EAS identity linking does not grant that capability.
+
+Steam game details additionally return `ownership.state`: `owned`, `not_owned`, or `unknown`, with `checkedAt` when known. This is based on a fresh, successful Owned Games snapshot for the connected account; absent/private/stale responses remain unknown. This is a library membership indication, not a payment receipt or a security entitlement. The UI offers `steam://run/<AppId>` for owned games and an external store purchase link for absent, paid games. Manual playtime adjustments use the existing revision-checked library save path and never update Steam playtime or story progress.

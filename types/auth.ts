@@ -5,6 +5,7 @@ export interface LoginInput {
   rememberMe: boolean;
 }
 export interface RegisterInput {
+  rememberMe?: boolean;
   displayName: string;
   email: string;
   password: string;

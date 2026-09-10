@@ -144,3 +144,11 @@ SOCIAL_LOGIN.fa.md. Visual mobile/browser QA was not performed because browser a
 restricted; responsive changes were reviewed in source and compiled. Verify real redirects,
 playtime after a Steam session, private visibility, artwork availability and 320–430px layouts
 on the deployed site.
+
+## Session persistence, playtime controls, Steam actions and Epic identity
+
+Temporary checks outside the repository exercised real session/route functions with controlled Mongo/cookie adapters: persistent and session cookies, sliding/absolute expiry, legacy sessions, logout races and origin rejection. Epic checks covered code exchange, browser/session/state binding, replay rejection, duplicate identity, cancelled pending connection, upstream failures and preservation of account data. Eight combined session/Epic groups passed.
+
+A React component/context check exercised repeated quick additions, custom addition/subtraction, batched rapid taps, zero bounds and preservation of review, rating, tags, progress and media. Steam game-details checks covered owned, absent, stale, private, disconnected and foreign-game cases. The existing twelve social-auth/activity/profile groups also passed. Production build includes TypeScript validation. No test files or test dependencies were added to the repository.
+
+These are controlled integration checks, not live Epic consent or Steam desktop launch verification. Epic production credentials/application approval and browser visual access were unavailable. Cross-game Epic import/playtime/achievements are explicitly unavailable, not represented as complete.

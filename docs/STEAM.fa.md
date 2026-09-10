@@ -133,3 +133,11 @@ Disconnect نسل اتصال را باطل، job و کش شخصی Steam را ح�
 - OpenID 2.0 verification: https://openid.net/specs/openid-authentication-2_0.html#verification
 - Vercel Cron security: https://vercel.com/docs/cron-jobs/manage-cron-jobs
 - Vercel Cron limits: https://vercel.com/docs/cron-jobs/usage-and-pricing
+
+## اجرای بازی و خرید
+
+در صفحهٔ بازی، اگر بازی در آخرین Library قابل‌دسترسی حساب متصل وجود داشته باشد، `Play in Steam` نمایش داده می‌شود. این لینک فقط با کلیک کاربر، `steam://run/<AppId>` را باز می‌کند؛ Steam باید روی همان دستگاه نصب و با حساب مالک بازی وارد شده باشد. این API اجرای بازی روی سرور یا تضمین نصب بازی نیست.
+
+اگر بازی پولی در Library تازه دریافت‌شده نباشد، لینک `Purchase on Steam` صفحهٔ فروشگاه را باز می‌کند. وضعیت خصوصی، قطع اتصال، خطا و cache قدیمی به «نخریده» تبدیل نمی‌شوند و لینک عمومی فروشگاه نمایش داده می‌شود. عضویت در Library می‌تواند شامل بازی‌های رایگان هم باشد و معادل رسید پرداخت نیست.
+
+مرجع لینک اجرا: https://partner.steamgames.com/doc/api/steam_api#SteamAPI_RestartAppIfNecessary
