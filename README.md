@@ -66,3 +66,5 @@ Google and Steam sign-in, automatic five-minute playtime refresh on return to th
 Steam profile stats/achievement summaries, and library-quality artwork are available.
 Configure the two new Google server variables and exact callback URL using
 [the social-login setup guide (فارسی)](docs/SOCIAL_LOGIN.fa.md).
+
+Storage quotas, one-time packs, image deletion and portable ZIP backups are documented in [docs/storage-and-backups.md](docs/storage-and-backups.md). Accounts include 1 GB free; optional Stripe environment variables are in the env examples.

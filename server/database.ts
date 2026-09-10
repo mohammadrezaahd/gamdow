@@ -33,6 +33,11 @@ export interface SessionDocument {
   expiresAt: Date;
 }
 export interface MediaDocument {
+  state?: "pending" | "ready" | "deleting";
+  deleteAfter?: Date;
+  importId?: string;
+  expectedHash?: string;
+  importPath?: string;
   _id: string;
   userId: string;
   storage: "local" | "vercel-blob";
@@ -77,6 +82,19 @@ export async function database() {
       throw error;
     });
   const db = (await state.gamdowMongo).db(c.dbName);
+  const storageLocks = db.collection<{
+    _id: string;
+    owner: string;
+    expiresAt: Date;
+  }>("storage_locks");
+  const storageGrants = db.collection<{
+    _id: string;
+    userId: string;
+    bytes: number;
+    createdAt: Date;
+  }>("storage_grants");
+  const backupJobs =
+    db.collection<import("./storage/backup").BackupJob>("backup_jobs");
   const epicConnections =
     db.collection<EpicConnectionDocument>("epic_connections");
   const authFlows = db.collection<AuthFlowDocument>("auth_flows");
@@ -98,6 +116,12 @@ export async function database() {
   );
   const steamState = db.collection<SteamStateDocument>("steam_state");
   state.gamdowIndexes ??= Promise.all([
+    storageLocks.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+    storageGrants.createIndex({ userId: 1 }),
+    backupJobs.createIndex({ userId: 1, expiresAt: 1 }),
+    backupJobs.createIndex({ purgeAt: 1 }, { expireAfterSeconds: 0 }),
+    media.createIndex({ userId: 1, state: 1 }),
+    media.createIndex({ deleteAfter: 1 }),
     epicConnections.createIndex({ accountId: 1 }, { unique: true }),
     authFlows.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     catalog.createIndex({ type: 1, searchName: 1 }),
@@ -127,6 +151,9 @@ export async function database() {
     });
   await state.gamdowIndexes;
   return {
+    storageLocks,
+    storageGrants,
+    backupJobs,
     epicConnections,
     authFlows,
     accounts,

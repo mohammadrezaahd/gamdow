@@ -1,6 +1,7 @@
 "use client";
 import { Box, CardActionArea, Stack, Typography } from "@mui/material";
 import {
+  DeleteOutlineRounded,
   FavoriteBorderRounded,
   FavoriteRounded,
   NorthEastRounded,
@@ -13,8 +14,10 @@ export function GameCard({
   game,
   onSelect,
   onFavorite,
+  onRemove,
 }: {
   game: Game;
+  onRemove?: (game: Game) => void;
   onSelect: (game: Game) => void;
   onFavorite: (id: string) => void;
 }) {
@@ -64,9 +67,9 @@ export function GameCard({
                 "linear-gradient(180deg, #0003, transparent 40%, #0009)",
             }}
           />
-          {game.source === "STEAM" && (
+          {(game.source === "STEAM" || game.storefront === "EPIC") && (
             <Chip
-              label="Steam"
+              label={game.source === "STEAM" ? "Steam" : "Epic"}
               size="small"
               sx={{
                 position: "absolute",
@@ -166,6 +169,22 @@ export function GameCard({
           </Stack>
         </Box>
       </CardActionArea>
+      {onRemove && (
+        <IconButton
+          size="small"
+          aria-label={`Remove ${game.title} from library`}
+          onClick={() => onRemove(game)}
+          sx={{
+            position: "absolute",
+            right: 8,
+            top: 45,
+            background: "#111311bb",
+            color: "#fff",
+          }}
+        >
+          <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+        </IconButton>
+      )}
       <IconButton
         aria-label={`Favorite ${game.title}`}
         aria-pressed={game.favorite}

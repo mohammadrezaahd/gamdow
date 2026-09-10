@@ -1,4 +1,5 @@
 "use client";
+import { StorageBadge } from "@/features/gamdow/storage/storage-panel";
 import { useState, type PropsWithChildren, type ReactNode } from "react";
 import {
   AppBar,
@@ -107,7 +108,7 @@ export function AppShell({
       >
         <Toolbar
           disableGutters
-          sx={{ minHeight: { xs: 76, md: 92 }, gap: { xs: 2, lg: 4 } }}
+          sx={{ minHeight: { xs: 76, md: 92 }, gap: { xs: 1, lg: 2 } }}
         >
           <Button
             aria-label="gamdow home"
@@ -205,6 +206,9 @@ export function AppShell({
           >
             New entry
           </Button>
+          <Box sx={{ display: { xs: "none", sm: "block" }, minWidth: 0 }}>
+            <StorageBadge onClick={() => go("settings")} />
+          </Box>
           <IconButton
             aria-label="Your profile"
             onClick={() => go("profile")}
@@ -228,6 +232,16 @@ export function AppShell({
             </Avatar>
           </IconButton>
         </Toolbar>
+        <Box
+          sx={{
+            display: { xs: "flex", sm: "none" },
+            justifyContent: "flex-end",
+            pb: 1,
+            mt: -1,
+          }}
+        >
+          <StorageBadge onClick={() => go("settings")} />
+        </Box>
       </AppBar>
       <Box
         sx={{

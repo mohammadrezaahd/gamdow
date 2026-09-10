@@ -1,4 +1,6 @@
 import "server-only";
+import { withStorageLock, storedMediaReferences } from "./storage/service";
+import { mediaReferences } from "@/lib/library-schema";
 import { steamArtwork } from "@/lib/steam-artwork";
 import type { AccountDocument } from "./database";
 import { database } from "./database";
@@ -129,6 +131,12 @@ export async function libraryView(
     return {
       ...g.personal,
       ...metadata,
+      ...(g.personal.savedCoverImage
+        ? { coverImage: g.personal.savedCoverImage }
+        : {}),
+      ...(g.personal.savedHeroImage
+        ? { heroImage: g.personal.savedHeroImage }
+        : {}),
       id: g.id,
       source: g.source,
       steamAppId: g.steamAppId,
@@ -171,7 +179,35 @@ export async function commitLibrary(
   snapshot: LibrarySnapshot,
   mutationId?: string,
 ) {
-  const stored = storedSnapshot(snapshot, account.snapshot);
+  return withStorageLock(account._id, () =>
+    commitLibraryUnderLock(account, snapshot, mutationId),
+  );
+}
+export async function commitLibraryUnderLock(
+  account: AccountDocument,
+  snapshot: LibrarySnapshot,
+  mutationId?: string,
+  restoreOriginals = false,
+) {
+  const refs = mediaReferences(snapshot),
+    db = await database();
+  if (
+    refs.length &&
+    (await db.media.countDocuments({
+      _id: { $in: refs },
+      userId: account._id,
+      state: { $nin: ["pending", "deleting"] },
+    })) !== refs.length
+  )
+    throw new HttpError(
+      400,
+      "Some images are missing, not ready or belong to another account.",
+      "INVALID_MEDIA",
+    );
+  const stored = storedSnapshot(
+    snapshot,
+    restoreOriginals ? undefined : account.snapshot,
+  );
   if (Buffer.byteLength(JSON.stringify(stored)) > 3 * 1024 * 1024)
     throw new HttpError(
       413,
@@ -199,5 +235,21 @@ export async function commitLibrary(
       "Your archive changed in another tab or device. Reload before continuing.",
       "REVISION_CONFLICT",
     );
+  const retained = new Set(storedMediaReferences(stored));
+  const removed = storedMediaReferences(account.snapshot).filter(
+    (id) => !retained.has(id),
+  );
+  // Read-time cleanup also catches a process crash between commit and this queue update.
+  if (removed.length) {
+    try {
+      await db.media.updateMany(
+        { userId: account._id, _id: { $in: removed } },
+        { $set: { state: "deleting", deleteAfter: new Date() } },
+      );
+      await (await import("./media")).cleanupMediaUnderLock(account._id);
+    } catch {
+      /* The archive commit remains successful; cleanup will retry. */
+    }
+  }
   return { snapshot, revision: account.revision + 1 };
 }

@@ -3,6 +3,7 @@ import { sameOrigin, failure, json, readBytes, HttpError } from "@/server/http";
 import { storeMedia, MAX_IMAGE_BYTES } from "@/server/media";
 import { rateLimit } from "@/server/rate-limit";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 export async function POST(request: Request) {
   try {
     sameOrigin(request);

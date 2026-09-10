@@ -87,6 +87,9 @@ export const snapshotSchema = z
         id,
         source: z.enum(["MANUAL", "STEAM"]).default("MANUAL"),
         steamAppId: z.number().int().positive().max(4294967295).optional(),
+        storefront: z.enum(["STEAM", "EPIC", "OTHER"]).optional(),
+        savedCoverImage: image.optional(),
+        savedHeroImage: image.optional(),
         originalManualMetadata: manualMetadataSchema.optional(),
         manualProgress: z.number().min(0).max(100).optional(),
         releaseDate: date.optional(),
@@ -181,6 +184,8 @@ export const snapshotSchema = z
         [
           g.coverImage,
           g.heroImage,
+          g.savedCoverImage,
+          g.savedHeroImage,
           g.originalManualMetadata?.coverImage,
           g.originalManualMetadata?.heroImage,
         ].some((v) => v && isSteamImage(v))
@@ -212,6 +217,8 @@ export function mediaReferences(snapshot: LibrarySnapshot): string[] {
         ...snapshot.games.flatMap((g) => [
           g.coverImage,
           g.heroImage,
+          g.savedCoverImage,
+          g.savedHeroImage,
           g.originalManualMetadata?.coverImage,
           g.originalManualMetadata?.heroImage,
         ]),

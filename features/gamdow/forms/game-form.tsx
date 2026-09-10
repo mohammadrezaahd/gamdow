@@ -285,6 +285,27 @@ export function GameForm({
               }}
             >
               <TextField
+                select
+                label="Storefront"
+                value={draft.storefront ?? "OTHER"}
+                onChange={(e) =>
+                  field(
+                    "storefront",
+                    e.target.value as "STEAM" | "EPIC" | "OTHER",
+                  )
+                }
+              >
+                {[
+                  ["OTHER", "Other / manual"],
+                  ["STEAM", "Steam (managed manually)"],
+                  ["EPIC", "Epic Games (managed manually)"],
+                ].map(([v, l]) => (
+                  <MenuItem key={v} value={v}>
+                    {l}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
                 label="Platform"
                 value={draft.platform}
                 onChange={(e) => field("platform", e.target.value)}

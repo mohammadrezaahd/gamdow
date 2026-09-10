@@ -52,6 +52,7 @@ export function useCloudLibrary(initial: LibraryResponse) {
           attempt.current = null;
           if (mounted.current) {
             setStatus("saved");
+            window.dispatchEvent(new Event("gamdow:storage-updated"));
             setCode("");
           }
         })
@@ -87,7 +88,7 @@ export function useCloudLibrary(initial: LibraryResponse) {
   ) => {
     if (external.current || inFlight.current || data !== saved.current || error)
       throw new Error(
-        "Wait until your changes are saved before syncing Steam.",
+        "Wait until your changes are saved before starting this operation.",
       );
     external.current = true;
     cancelRequested.current = false;
@@ -111,13 +112,14 @@ export function useCloudLibrary(initial: LibraryResponse) {
         if (mounted.current) {
           setData(result.snapshot);
           setStatus("saved");
+          window.dispatchEvent(new Event("gamdow:storage-updated"));
           setError("");
           setCode("");
         }
       } catch {
         if (mounted.current) {
           setError(
-            "Could not reload after the Steam operation. Reload before editing to avoid a conflict.",
+            "Could not reload after the operation. Reload before editing to avoid a conflict.",
           );
           setCode("REVISION_CONFLICT");
           setStatus("error");

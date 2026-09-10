@@ -1,4 +1,5 @@
 "use client";
+import { StorageProvider } from "./storage/storage-context";
 import { adjustPlaytime, MAX_PLAYTIME_HOURS } from "@/lib/playtime";
 import type { ProfileInput } from "@/types/profile";
 import { normalizeTags } from "@/lib/tags";
@@ -209,86 +210,92 @@ export function LibraryProvider({
     },
   };
   return (
-    <Context.Provider value={value}>
-      <Stack
-        role="status"
-        direction="row"
-        sx={{ px: 3, py: 1, justifyContent: "flex-end" }}
-      >
-        <Typography
-          variant="caption"
-          color={error ? "error.main" : "text.secondary"}
+    <StorageProvider>
+      <Context.Provider value={value}>
+        <Stack
+          role="status"
+          direction="row"
+          sx={{ px: 3, py: 1, justifyContent: "flex-end" }}
         >
-          {status === "saved"
-            ? "All changes saved"
-            : status === "saving"
-              ? "Saving changes…"
-              : "Changes not saved"}
-        </Typography>
-      </Stack>
-      {error && (
-        <Alert
-          severity="error"
-          action={
-            <Stack direction="row" spacing={1}>
-              {code !== "REVISION_CONFLICT" && code !== "ACCOUNT_CHANGED" && (
-                <Button color="inherit" onClick={retry}>
-                  Retry
-                </Button>
-              )}
-              {code === "UNAUTHENTICATED" && (
+          <Typography
+            variant="caption"
+            color={error ? "error.main" : "text.secondary"}
+          >
+            {status === "saved"
+              ? "All changes saved"
+              : status === "saving"
+                ? "Saving changes…"
+                : "Changes not saved"}
+          </Typography>
+        </Stack>
+        {error && (
+          <Alert
+            severity="error"
+            action={
+              <Stack direction="row" spacing={1}>
+                {code !== "REVISION_CONFLICT" && code !== "ACCOUNT_CHANGED" && (
+                  <Button color="inherit" onClick={retry}>
+                    Retry
+                  </Button>
+                )}
+                {code === "UNAUTHENTICATED" && (
+                  <Button
+                    component="a"
+                    href="/login"
+                    target="_blank"
+                    rel="noopener"
+                    color="inherit"
+                  >
+                    Log in
+                  </Button>
+                )}
                 <Button
-                  component="a"
-                  href="/login"
-                  target="_blank"
-                  rel="noopener"
                   color="inherit"
-                >
-                  Log in
-                </Button>
-              )}
-              <Button
-                color="inherit"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "Reload the server version? Pending changes will be lost. Export them in Settings first.",
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Reload the server version? Pending changes will be lost. Uncommitted changes cannot be included in a server ZIP backup.",
+                      )
                     )
-                  )
-                    window.location.reload();
-                }}
-              >
-                Reload
-              </Button>
-            </Stack>
-          }
+                      window.location.reload();
+                  }}
+                >
+                  Reload
+                </Button>
+              </Stack>
+            }
+          >
+            {error} Resolve pending changes before creating a complete ZIP
+            backup.
+          </Alert>
+        )}
+        {children}
+        <Dialog
+          open={!!externalMessage}
+          aria-labelledby="steam-operation-title"
         >
-          {error} Pending changes can be exported in Settings.
-        </Alert>
-      )}
-      {children}
-      <Dialog open={!!externalMessage} aria-labelledby="steam-operation-title">
-        <DialogContent>
-          <Stack spacing={2} sx={{ alignItems: "center", p: 2 }}>
-            <CircularProgress size={32} />
-            <Typography id="steam-operation-title" role="status">
-              {externalMessage}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Your saved notes and game progress stay unchanged.
-            </Typography>
-            <Button onClick={cancelExternal}>Pause after this step</Button>
-          </Stack>
-        </DialogContent>
-      </Dialog>
-      <Snackbar
-        open={!!message}
-        autoHideDuration={2600}
-        onClose={() => notify("")}
-        message={message}
-        sx={{ bottom: { xs: "105px !important", md: "24px !important" } }}
-      />
-    </Context.Provider>
+          <DialogContent>
+            <Stack spacing={2} sx={{ alignItems: "center", p: 2 }}>
+              <CircularProgress size={32} />
+              <Typography id="steam-operation-title" role="status">
+                {externalMessage}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Keep this page open until the operation finishes.
+              </Typography>
+              <Button onClick={cancelExternal}>Pause after this step</Button>
+            </Stack>
+          </DialogContent>
+        </Dialog>
+        <Snackbar
+          open={!!message}
+          autoHideDuration={2600}
+          onClose={() => notify("")}
+          message={message}
+          sx={{ bottom: { xs: "105px !important", md: "24px !important" } }}
+        />
+      </Context.Provider>
+    </StorageProvider>
   );
 }
 export function useLibrary() {

@@ -9,6 +9,7 @@ import { database } from "@/server/database";
 import { sameOrigin, failure, json, readJson, HttpError } from "@/server/http";
 import { parseLibrary, mediaReferences } from "@/lib/library-schema";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 export async function GET() {
   try {
     const { account } = await requireSession();

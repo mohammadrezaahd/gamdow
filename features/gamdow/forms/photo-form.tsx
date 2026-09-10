@@ -1,4 +1,5 @@
 "use client";
+import { discardDraftImage } from "@/services/media-repository";
 import { useState } from "react";
 import {
   Alert,
@@ -91,7 +92,10 @@ export function PhotoForm({
               multiple={!photo}
               value={images[0]}
               onImages={(items) => setImages(items.map((i) => i.src))}
-              onRemove={() => setImages([])}
+              onRemove={() => {
+                images.slice(1).forEach((src) => void discardDraftImage(src));
+                setImages([]);
+              }}
             />
             {images.length > 1 && (
               <Typography variant="caption" color="primary.main">

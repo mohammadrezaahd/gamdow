@@ -13,6 +13,7 @@ import { matchesGameSearch } from "@/lib/tags";
 import { useState } from "react";
 import { Box, FormControlLabel, Paper, Stack, Typography } from "@mui/material";
 import {
+  DeleteOutlineRounded,
   EditRounded,
   GridViewRounded,
   ViewListRounded,
@@ -20,10 +21,15 @@ import {
 import type { Game } from "@/types/game";
 import { GameGrid } from "@/components/game-grid";
 import { GameImage } from "@/components/game-image";
-import { EmptyState, SectionTitle } from "@/components/page-parts";
+import {
+  ConfirmDialog,
+  EmptyState,
+  SectionTitle,
+} from "@/components/page-parts";
 import { statuses } from "@/services/library-repository";
 import { useLibrary } from "../library-context";
 export interface LibraryFilters {
+  source: string;
   status: string;
   genre: string;
   series: string;
@@ -33,6 +39,7 @@ export interface LibraryFilters {
   sort: string;
 }
 export const defaultFilters: LibraryFilters = {
+  source: "All",
   status: "All",
   genre: "All",
   series: "All",
@@ -58,7 +65,8 @@ export function LibraryPage({
   onAdd: () => void;
   onEdit: (game: Game) => void;
 }) {
-  const { data, saveGame } = useLibrary();
+  const { data, saveGame, deleteGame } = useLibrary();
+  const [remove, setRemove] = useState<Game | null>(null);
   const [view, setView] = useState(data.preferences.defaultLibraryView);
   const set = (key: keyof LibraryFilters, value: string | boolean) =>
     onFilters({ ...filters, [key]: value });
@@ -66,6 +74,14 @@ export function LibraryPage({
     .filter(
       (g) =>
         matchesGameSearch(g, search) &&
+        (filters.source === "All" ||
+          (filters.source === "STEAM"
+            ? g.source === "STEAM" || g.storefront === "STEAM"
+            : filters.source === "EPIC"
+              ? g.storefront === "EPIC"
+              : g.source !== "STEAM" &&
+                g.storefront !== "EPIC" &&
+                g.storefront !== "STEAM")) &&
         (filters.status === "All" || g.status === filters.status) &&
         (filters.genre === "All" || g.genres.includes(filters.genre)) &&
         (filters.series === "All" || g.series === filters.series) &&
@@ -182,6 +198,24 @@ export function LibraryPage({
             </TextField>
           ))}
           <TextField
+            select
+            size="small"
+            label="Source / storefront"
+            value={filters.source}
+            onChange={(e) => set("source", e.target.value)}
+          >
+            {[
+              ["All", "All sources"],
+              ["STEAM", "Steam"],
+              ["MANUAL", "Manual / other"],
+              ["EPIC", "Epic Games"],
+            ].map(([v, l]) => (
+              <MenuItem key={v} value={v}>
+                {l}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
             label="Minimum score"
             size="small"
             type="number"
@@ -251,6 +285,7 @@ export function LibraryPage({
         />
       ) : view === "grid" ? (
         <GameGrid
+          onRemove={setRemove}
           games={games}
           onSelect={(g) => onGame(g.id)}
           onFavorite={(id) => {
@@ -301,6 +336,12 @@ export function LibraryPage({
                 sx={{ display: { xs: "none", sm: "flex" } }}
               />
               <IconButton
+                aria-label={`Remove ${g.title} from library`}
+                onClick={() => setRemove(g)}
+              >
+                <DeleteOutlineRounded />
+              </IconButton>
+              <IconButton
                 aria-label={`Edit ${g.title}`}
                 onClick={() => onEdit(g)}
               >
@@ -309,6 +350,17 @@ export function LibraryPage({
             </Paper>
           ))}
         </Stack>
+      )}
+      {remove && (
+        <ConfirmDialog
+          title={`Remove ${remove.title}?`}
+          description="Remove this game, its personal reviews and gallery from your gamdow library? Uploaded files that are no longer used will be deleted and their storage released. Your Steam ownership is unchanged."
+          onClose={() => setRemove(null)}
+          onConfirm={() => {
+            deleteGame(remove.id);
+            setRemove(null);
+          }}
+        />
       )}
     </>
   );

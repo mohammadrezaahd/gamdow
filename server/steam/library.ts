@@ -139,6 +139,10 @@ export async function unlinkGame(account: AccountDocument, gameId: string) {
                 ...original,
               }
             : { coverImage: "", heroImage: "" }),
+          coverImage: g.savedCoverImage || original?.coverImage || "",
+          heroImage: g.savedHeroImage || original?.heroImage,
+          savedCoverImage: undefined,
+          savedHeroImage: undefined,
           source: "MANUAL",
           steamAppId: undefined,
           originalManualMetadata: undefined,

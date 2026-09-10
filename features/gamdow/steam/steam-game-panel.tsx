@@ -1,4 +1,5 @@
 "use client";
+import { OfficialImages } from "../storage/official-images";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -26,7 +27,7 @@ export function SteamGamePanel({
   game: Game;
   onMetadata: (metadata: SteamMetadata) => void;
 }) {
-  const { runServerOperation, hasUnsavedChanges, notify, data } = useLibrary();
+  const { runServerOperation, hasUnsavedChanges, notify } = useLibrary();
   const [details, setDetails] = useState<SteamGameDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -390,57 +391,7 @@ export function SteamGamePanel({
             )}
           </Box>
         )}
-        {!!m?.screenshots.length && (
-          <Box>
-            <Typography variant="h6" sx={{ mb: 1 }}>
-              Official Steam screenshots
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Separate from your uploaded gallery.
-            </Typography>
-            {data.preferences.hideSpoilers && !showHidden ? (
-              <Button
-                sx={{ display: "block" }}
-                onClick={() => setShowHidden(true)}
-              >
-                Show official screenshots
-              </Button>
-            ) : (
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "minmax(0,1fr) minmax(0,1fr)",
-                    md: "repeat(4,minmax(0,1fr))",
-                  },
-                  gap: 1,
-                  mt: 1,
-                }}
-              >
-                {m.screenshots.map((s) => (
-                  <Box
-                    component="a"
-                    key={s.id}
-                    href={s.full}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <GameImage
-                      src={s.thumbnail || s.full}
-                      alt={`${game.title} official screenshot ${s.id + 1}`}
-                      sx={{
-                        width: "100%",
-                        aspectRatio: "16/9",
-                        objectFit: "cover",
-                        borderRadius: 1,
-                      }}
-                    />
-                  </Box>
-                ))}
-              </Box>
-            )}
-          </Box>
-        )}
+        {m && <OfficialImages game={game} metadata={m} />}
         <Button
           size="small"
           sx={{ alignSelf: "flex-start" }}

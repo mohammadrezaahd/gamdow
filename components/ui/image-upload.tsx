@@ -1,5 +1,5 @@
 "use client";
-import { uploadImage } from "@/services/media-repository";
+import { uploadImage, discardDraftImage } from "@/services/media-repository";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -67,6 +67,7 @@ export function ImageUpload({
     alive.current = true;
     return () => {
       alive.current = false;
+      output.current.forEach((image) => void discardDraftImage(image.src));
       urls.current.forEach(URL.revokeObjectURL);
     };
   }, []);
@@ -74,6 +75,7 @@ export function ImageUpload({
     session.current++;
     setQueue([]);
     setIndex(0);
+    output.current.forEach((image) => void discardDraftImage(image.src));
     output.current = [];
     urls.current.forEach(URL.revokeObjectURL);
     urls.current = [];
@@ -129,7 +131,10 @@ export function ImageUpload({
       const image = await uploadImage(
         await cropImage(current.src, pixels, preset, current.name),
       );
-      if (!alive.current || run !== session.current) return;
+      if (!alive.current || run !== session.current) {
+        void discardDraftImage(image.src);
+        return;
+      }
       output.current.push(image);
       if (index < queue.length - 1) {
         setIndex(index + 1);
@@ -137,7 +142,11 @@ export function ImageUpload({
         setZoom(1);
         setPixels(null);
       } else {
-        onImages([...output.current]);
+        const completed = [...output.current];
+        onImages(completed);
+        output.current = [];
+        if (!multiple && value && value !== completed[0]?.src)
+          void discardDraftImage(value);
         close();
       }
     } catch (e) {
@@ -222,7 +231,10 @@ export function ImageUpload({
                 <IconButton
                   size="small"
                   aria-label={`Remove ${label.toLowerCase()}`}
-                  onClick={onRemove}
+                  onClick={() => {
+                    onRemove();
+                    void discardDraftImage(value);
+                  }}
                 >
                   <CloseRounded fontSize="small" />
                 </IconButton>

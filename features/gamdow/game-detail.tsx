@@ -91,6 +91,7 @@ export function GameDetail({
       >
         <GameImage
           src={
+            game.savedHeroImage ||
             visibleMetadata?.images.background ||
             visibleMetadata?.images.header ||
             game.heroImage ||
@@ -121,7 +122,11 @@ export function GameDetail({
           }}
         >
           <GameImage
-            src={visibleMetadata?.images.cover || game.coverImage}
+            src={
+              game.savedCoverImage ||
+              visibleMetadata?.images.cover ||
+              game.coverImage
+            }
             alt={game.title}
             sx={{
               width: 110,

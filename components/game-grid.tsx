@@ -4,11 +4,17 @@ import { GameCard } from "./game-card";
 
 type GameGridProps = {
   games: Game[];
+  onRemove?: (game: Game) => void;
   onSelect: (game: Game) => void;
   onFavorite: (id: string) => void;
 };
 
-export function GameGrid({ games, onSelect, onFavorite }: GameGridProps) {
+export function GameGrid({
+  games,
+  onSelect,
+  onFavorite,
+  onRemove,
+}: GameGridProps) {
   return (
     <Box
       sx={{
@@ -25,6 +31,7 @@ export function GameGrid({ games, onSelect, onFavorite }: GameGridProps) {
         <GameCard
           key={game.id}
           game={game}
+          onRemove={onRemove}
           onSelect={onSelect}
           onFavorite={onFavorite}
         />

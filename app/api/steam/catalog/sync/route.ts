@@ -15,7 +15,17 @@ export async function POST(request: Request) {
       !timingSafeEqual(Buffer.from(received), Buffer.from(expected))
     )
       throw new HttpError(401, "Unauthorized scheduler.", "UNAUTHENTICATED");
-    return json(await syncCatalogPage());
+    const { cleanupStorage } = await import("@/server/storage/cleanup");
+    const [catalog, storage] = await Promise.allSettled([
+      syncCatalogPage(),
+      cleanupStorage(),
+    ]);
+    if (catalog.status === "rejected") throw catalog.reason;
+    return json({
+      ...catalog.value,
+      storage:
+        storage.status === "fulfilled" ? storage.value : { deferred: true },
+    });
   } catch (e) {
     return failure(e);
   }

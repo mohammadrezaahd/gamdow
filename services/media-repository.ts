@@ -12,10 +12,22 @@ export async function uploadImage(
     headers: { "Content-Type": blob.type },
     body: blob,
   });
+  window.dispatchEvent(new Event("gamdow:storage-updated"));
   return {
     ...image,
     src: result.src,
     width: result.width,
     height: result.height,
   };
+}
+
+/** Detached draft images can be removed immediately; attached images wait for archive commit. */
+export async function discardDraftImage(src?: string) {
+  if (!src?.startsWith("/api/media/")) return;
+  try {
+    await apiRequest(src, { method: "DELETE", keepalive: true });
+    window.dispatchEvent(new Event("gamdow:storage-updated"));
+  } catch {
+    /* Referenced/busy files are protected; expiry cleanup handles abandoned uploads. */
+  }
 }

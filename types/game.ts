@@ -21,6 +21,9 @@ export interface Game {
   id: string;
   source?: "MANUAL" | "STEAM";
   steamAppId?: number;
+  storefront?: "STEAM" | "EPIC" | "OTHER";
+  savedCoverImage?: string;
+  savedHeroImage?: string;
   originalManualMetadata?: ManualGameMetadata;
   manualProgress?: number;
   releaseDate?: string;
