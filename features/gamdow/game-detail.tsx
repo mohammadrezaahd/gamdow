@@ -289,6 +289,22 @@ export function GameDetail({
                 Manage details & collections
               </Button>
             </Box>
+            <Divider />
+            <Box>
+              <Stack
+                direction="row"
+                sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}
+              >
+                <Box>
+                  <Typography variant="h5">Game timeline</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Your personal play history and activity changes.
+                  </Typography>
+                </Box>
+                <Button onClick={() => setTab(4)}>Open full timeline</Button>
+              </Stack>
+              <GameTimelinePanel game={game} />
+            </Box>
           </Stack>
         )}
         {tab === 1 && (
