@@ -27,7 +27,7 @@ export function SteamGamePanel({
   game: Game;
   onMetadata: (metadata: SteamMetadata) => void;
 }) {
-  const { runServerOperation, hasUnsavedChanges, notify } = useLibrary();
+  const { runServerOperation, refreshLibrary, hasUnsavedChanges, notify } = useLibrary();
   const [details, setDetails] = useState<SteamGameDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -51,6 +51,7 @@ export function SteamGamePanel({
         if (active) {
           setDetails(result);
           if (result.metadata) onMetadata(result.metadata);
+          void refreshLibrary();
         }
       })
       .catch((e) => {
@@ -65,7 +66,7 @@ export function SteamGamePanel({
     return () => {
       active = false;
     };
-  }, [game.steamAppId, retry, onMetadata]);
+  }, [game.steamAppId, retry, onMetadata, refreshLibrary]);
   useEffect(() => {
     const update = () => setRetry((n) => n + 1);
     window.addEventListener("gamdow:steam-updated", update);

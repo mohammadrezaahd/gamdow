@@ -8,11 +8,13 @@ import { requireSession } from "@/server/session";
 import { database } from "@/server/database";
 import { sameOrigin, failure, json, readJson, HttpError } from "@/server/http";
 import { parseLibrary, mediaReferences } from "@/lib/library-schema";
+import { flushTimelineOutbox } from "@/server/game-activity/timeline";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function GET() {
   try {
     const { account } = await requireSession();
+    await flushTimelineOutbox(account._id);
     return json({
       snapshot: await libraryView(account),
       revision: account.revision,
@@ -32,8 +34,10 @@ export async function PUT(request: Request) {
         mutationId: z.string().uuid(),
       })
       .parse(await readJson(request));
-    if (account.lastMutationId === input.mutationId)
+    if (account.lastMutationId === input.mutationId) {
+      await flushTimelineOutbox(account._id);
       return json({ revision: account.revision });
+    }
     if (account.revision !== input.revision)
       throw new HttpError(
         409,

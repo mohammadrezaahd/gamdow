@@ -4,8 +4,10 @@ import { Alert } from "@mui/material";
 import { Button } from "@/components/ui";
 import { useState } from "react";
 import { apiRequest, ApiError } from "@/services/http-client";
+import { useLibrary } from "../library-context";
 /** Refresh on return to the site and every five visible minutes. Server cache coordinates tabs. */
 export function SteamAutoSync() {
+  const { refreshLibrary } = useLibrary();
   const [warning, setWarning] = useState("");
   const [retry, setRetry] = useState(0);
   useEffect(() => {
@@ -23,7 +25,7 @@ export function SteamAutoSync() {
       busy = true;
       lastAttempt = Date.now();
       try {
-        await apiRequest("/api/steam/activity", {
+        await apiRequest<{ archiveChanged?: boolean }>("/api/steam/activity", {
           method: "POST",
           signal: AbortSignal.any([
             controller.signal,
@@ -31,6 +33,9 @@ export function SteamAutoSync() {
           ]),
         });
         if (live) {
+          // Also reload on a cached response: another tab may have performed
+          // the provider sync and advanced the authoritative archive.
+          await refreshLibrary();
           setWarning("");
           window.dispatchEvent(new Event("gamdow:steam-updated"));
         }
@@ -66,7 +71,7 @@ export function SteamAutoSync() {
       window.removeEventListener("focus", update);
       document.removeEventListener("visibilitychange", update);
     };
-  }, [retry]);
+  }, [refreshLibrary, retry]);
   return warning ? (
     <Alert
       severity="warning"

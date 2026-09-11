@@ -101,6 +101,7 @@ export interface SteamConnection {
   sync?: SteamSyncResult;
 }
 export interface SteamGameDetails {
+  archiveChanged?: boolean;
   ownership?: { state: "owned" | "not_owned" | "unknown"; checkedAt?: string };
   metadata: SteamMetadata | null;
   metadataStale: boolean;

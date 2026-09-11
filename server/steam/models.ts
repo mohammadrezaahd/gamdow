@@ -30,6 +30,7 @@ export interface SteamUserGameDocument {
   generation: string;
   steamAppId: number;
   playtime?: SteamPlaytime;
+  statusSuggestion?: import("@/types/game-activity").GameStatusSuggestion;
   achievements?: {
     unlocks: { apiName: string; unlocked: boolean; unlockedAt?: string }[];
     lastSyncAt: string;

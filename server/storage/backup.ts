@@ -22,6 +22,7 @@ import {
   withStorageLock,
   storedMediaReferences,
 } from "./service";
+import { flushTimelineOutbox, timelineDocuments } from "../game-activity/timeline";
 export interface BackupJob {
   _id: string;
   userId: string;
@@ -31,12 +32,22 @@ export interface BackupJob {
   purgeAt?: Date;
   manifest: BackupManifest;
   files: BackupImportSession["files"];
+  timelineCutoverAt?: Date;
 }
 export async function exportManifest(
   account: AccountDocument,
 ): Promise<BackupManifest> {
   const snapshot = await libraryView(account),
     library = archiveOnly(snapshot);
+  await flushTimelineOutbox(account._id);
+  const gameIds = snapshot.games.map((game) => game.id);
+  const timeline = await (await database()).gameActivityEvents
+    .find(
+      { userId: account._id, gameId: { $in: gameIds } },
+      { projection: { _id: 0, userId: 0, importId: 0 } },
+    )
+    .sort({ occurredAt: 1, id: 1 })
+    .toArray();
   const refs = mediaReferences({
     ...snapshot,
     profile: { ...snapshot.profile, avatarImage: "" },
@@ -60,6 +71,7 @@ export async function exportManifest(
     format: "gamdow-archive",
     version: 1,
     library,
+    timeline,
     assets: files.map((f) => ({
       id: f._id,
       path: `media/${f._id}.jpg`,
@@ -153,6 +165,7 @@ export async function beginImport(
       purgeAt: new Date(expiresAt.getTime() + 7 * 86400000),
       manifest,
       files,
+      timelineCutoverAt: new Date(),
     });
     const reserved: MediaDocument[] = manifest.assets.map((a, i) => ({
       _id: files[i].mediaId,
@@ -252,7 +265,9 @@ export async function finishImport(userId: string, id: string) {
       job = await db.backupJobs.findOne({ _id: id, userId }),
       account = await db.accounts.findOne({ _id: userId });
     if (!job || !account) throw new HttpError(404, "Import not found.");
-    if (job.status === "completed" || account.lastMutationId === id) {
+    if (job.status === "completed") return { completed: true };
+    if (account.lastMutationId === id) {
+      await restoreImportedTimeline(userId, job);
       await db.backupJobs.updateOne(
         { _id: id, userId },
         { $set: { status: "completed" } },
@@ -284,13 +299,47 @@ export async function finishImport(userId: string, id: string) {
       await libraryView(account),
       new Map(job.files.map((f) => [f.originalId, f.mediaId])),
     );
-    await commitLibraryUnderLock(account, snapshot, id, true);
+    await commitLibraryUnderLock(account, snapshot, id, true, {
+      source: "SYSTEM",
+      suppressDerivedEvents: true,
+    });
+    await restoreImportedTimeline(userId, job);
     await db.backupJobs.updateOne(
       { _id: id, userId },
       { $set: { status: "completed" } },
     );
     return { completed: true };
   });
+}
+
+async function restoreImportedTimeline(userId: string, job: BackupJob) {
+  const db = await database();
+  const cutover =
+    job.timelineCutoverAt ?? new Date(job.expiresAt.getTime() - 86_400_000);
+  await flushTimelineOutbox(userId);
+  await db.gameActivityEvents.deleteMany({
+    userId,
+    importId: { $ne: job._id },
+    recordedAt: { $lte: cutover.toISOString() },
+  });
+  const documents = timelineDocuments(
+    userId,
+    (job.manifest.timeline ?? []).map((event, index) => ({
+      ...event,
+      id: `${job._id}:timeline:${index}`,
+    })),
+  ).map((document) => ({ ...document, importId: job._id }));
+  if (documents.length)
+    await db.gameActivityEvents.bulkWrite(
+      documents.map((document) => ({
+        updateOne: {
+          filter: { _id: document._id, userId },
+          update: { $setOnInsert: document },
+          upsert: true,
+        },
+      })),
+      { ordered: false },
+    );
 }
 export async function cancelImport(userId: string, id: string) {
   return withStorageLock(userId, async () => {

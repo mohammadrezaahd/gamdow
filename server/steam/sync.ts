@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { database } from "../database";
 import { HttpError } from "../http";
-import { libraryView, commitLibrary } from "../library-storage";
+import { libraryView } from "../library-storage";
 import { withSteamLock } from "./locks";
 import { newSteamGame } from "./library";
 import { getSteamMetadata } from "./metadata";
@@ -12,6 +12,7 @@ import { getAchievements } from "./achievements";
 import type { SteamJobDocument } from "./models";
 import type { SteamSyncStart } from "@/types/steam";
 import { fresh } from "./client";
+import { reconcileSteamPlaytime } from "./playtime-sync";
 
 export async function startLibrarySync(
   userId: string,
@@ -178,6 +179,7 @@ export async function continueLibrarySync(userId: string, jobId: string) {
       let consumed = 0,
         detailRequests = 0,
         changed = false;
+      const processedOwned: typeof job.remaining = [];
       const start = Date.now();
       const rows = await db.catalog
         .find(
@@ -245,30 +247,17 @@ export async function continueLibrarySync(userId: string, jobId: string) {
         }
         if (initial.has(owned.appid)) job.existing++;
         else job.added++;
-        await db.steamUserGames.updateOne(
-          { _id: `${c.generation}:${owned.appid}` },
-          {
-            $set: {
-              userId,
-              generation: c.generation,
-              steamAppId: owned.appid,
-              playtime: {
-                totalMinutes: owned.playtime_forever,
-                recentMinutes: owned.playtime_2weeks,
-                lastPlayedAt: owned.rtime_last_played
-                  ? new Date(owned.rtime_last_played * 1000).toISOString()
-                  : undefined,
-                lastSyncAt: new Date().toISOString(),
-              },
-            },
-          },
-          { upsert: true },
-        );
+        processedOwned.push(owned);
         job.achievementRemaining.push(owned.appid);
         job.achievementTotal++;
         consumed++;
       }
-      if (changed) await commitLibrary(account, snapshot); // CAS preserves other-tab edits; retry is AppID-idempotent.
+      if (processedOwned.length || changed)
+        await reconcileSteamPlaytime(account, snapshot, c, processedOwned, {
+          archiveChanged: changed,
+          eventNamespace: `steam-job:${job.id}:${job.processed}`,
+          observedAt: new Date().toISOString(),
+        }); // CAS preserves other-tab edits; AppID writes and timeline events are idempotent.
       job.remaining = job.remaining.slice(consumed);
       job.processed += consumed;
       if (!job.remaining.length) job.phase = "achievements";

@@ -21,9 +21,10 @@ export async function steamGameDetails(
       "NOT_FOUND",
     );
   let activityWarning: string | undefined;
+  let archiveChanged = false;
   if (await (await database()).steamConnections.findOne({ _id: account._id })) {
     try {
-      await refreshActivity(account._id);
+      archiveChanged = (await refreshActivity(account._id)).archiveChanged;
     } catch (e) {
       activityWarning =
         e instanceof HttpError
@@ -36,6 +37,7 @@ export async function steamGameDetails(
     const c = await db.steamConnections.findOne({ _id: account._id });
     const result: SteamGameDetails = {
       metadata: null,
+      archiveChanged,
       metadataStale: false,
       connected: !!c,
       ownership: { state: "unknown" },

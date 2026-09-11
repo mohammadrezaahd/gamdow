@@ -47,6 +47,7 @@ These scripts use Node's `--env-file` support and work in Windows shells. Vercel
 - `types/`: interfaces for domain data, API payloads and authentication.
 - `services/`: typed HTTP adapters. The client never receives a MongoDB or Blob credential.
 - `features/gamdow/use-cloud-library.ts`: serial, revisioned autosave with retry/idempotency, visible sync status and protection against overwriting another tab's changes.
+- `lib/game-activity.ts` + `server/game-activity/`: shared tracking rules and an idempotent per-user timeline projection.
 - `components/ui/`: shared controls, fixed-aspect crop/upload, tag input and drag-and-drop.
 
 All current UI actions persist through the authenticated library API: games, status/plan/reorder, reviews/scores, journal, gallery, collections, genres/series, tags, preferences and profile. Media uploads are separate binary requests; snapshots contain only owned media references.
@@ -68,3 +69,5 @@ Configure the two new Google server variables and exact callback URL using
 [the social-login setup guide (فارسی)](docs/SOCIAL_LOGIN.fa.md).
 
 Storage quotas, one-time packs, image deletion and portable ZIP backups are documented in [docs/storage-and-backups.md](docs/storage-and-backups.md). Accounts include 1 GB free; optional Stripe environment variables are in the env examples.
+
+Per-game status, dates, manual playtime and external activity history are documented in [docs/GAME_TIMELINE.md](docs/GAME_TIMELINE.md). This feature adds no environment variables and requires no destructive migration.

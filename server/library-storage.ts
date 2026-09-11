@@ -1,4 +1,6 @@
 import "server-only";
+import { randomUUID } from "node:crypto";
+import type { UpdateFilter } from "mongodb";
 import { withStorageLock, storedMediaReferences } from "./storage/service";
 import { mediaReferences } from "@/lib/library-schema";
 import { steamArtwork } from "@/lib/steam-artwork";
@@ -13,6 +15,23 @@ import type {
 } from "@/types/user-game";
 import type { SteamMetadata } from "@/types/steam";
 import { normalizeTaxonomies } from "@/lib/taxonomy";
+import { deriveLibraryActivity } from "@/lib/game-activity";
+import type {
+  GameActivityEvent,
+  GameActivitySource,
+} from "@/types/game-activity";
+import {
+  flushTimelineOutbox,
+  timelineDocuments,
+} from "./game-activity/timeline";
+
+export interface ActivityCommitContext {
+  source?: GameActivitySource;
+  inferred?: boolean;
+  occurredAt?: string;
+  extraEvents?: GameActivityEvent[];
+  suppressDerivedEvents?: boolean;
+}
 export function splitGame(game: Game): UserGame {
   const {
     id,
@@ -178,9 +197,10 @@ export async function commitLibrary(
   account: AccountDocument,
   snapshot: LibrarySnapshot,
   mutationId?: string,
+  activity?: ActivityCommitContext,
 ) {
   return withStorageLock(account._id, () =>
-    commitLibraryUnderLock(account, snapshot, mutationId),
+    commitLibraryUnderLock(account, snapshot, mutationId, false, activity),
   );
 }
 export async function commitLibraryUnderLock(
@@ -188,7 +208,26 @@ export async function commitLibraryUnderLock(
   snapshot: LibrarySnapshot,
   mutationId?: string,
   restoreOriginals = false,
+  activity?: ActivityCommitContext,
 ) {
+  const now = activity?.occurredAt ?? new Date().toISOString();
+  const activityMutationId = mutationId ?? randomUUID();
+  const previous = await libraryView(account);
+  const derived = deriveLibraryActivity(previous.games, snapshot.games, {
+    mutationId: activityMutationId,
+    now,
+    source: activity?.source ?? "MANUAL",
+    inferred: activity?.inferred,
+  });
+  snapshot = { ...snapshot, games: derived.games };
+  const retainedGameIds = new Set(snapshot.games.map((game) => game.id));
+  const removedGameIds = previous.games
+    .filter((game) => !retainedGameIds.has(game.id))
+    .map((game) => game.id);
+  const timeline = timelineDocuments(account._id, [
+    ...(activity?.suppressDerivedEvents ? [] : derived.events),
+    ...(activity?.extraEvents ?? []),
+  ]);
   const refs = mediaReferences(snapshot),
     db = await database();
   if (
@@ -215,19 +254,23 @@ export async function commitLibraryUnderLock(
       "ARCHIVE_TOO_LARGE",
     );
   const { accounts } = await database();
+  const update: UpdateFilter<AccountDocument> = {
+    $set: {
+      snapshot: stored,
+      ...(mutationId ? { lastMutationId: mutationId } : {}),
+      ...(account.snapshot.version === 1 && !account.legacySnapshot
+        ? { legacySnapshot: account.snapshot }
+        : {}),
+    },
+    $inc: { revision: 1 },
+    ...(!mutationId ? { $unset: { lastMutationId: "" } } : {}),
+    ...(timeline.length
+      ? { $push: { timelineOutbox: { $each: timeline } } }
+      : {}),
+  };
   const result = await accounts.updateOne(
     { _id: account._id, revision: account.revision },
-    {
-      $set: {
-        snapshot: stored,
-        ...(mutationId ? { lastMutationId: mutationId } : {}),
-        ...(account.snapshot.version === 1 && !account.legacySnapshot
-          ? { legacySnapshot: account.snapshot }
-          : {}),
-      },
-      $inc: { revision: 1 },
-      ...(!mutationId ? { $unset: { lastMutationId: "" as const } } : {}),
-    },
+    update,
   );
   if (!result.modifiedCount)
     throw new HttpError(
@@ -250,6 +293,17 @@ export async function commitLibraryUnderLock(
     } catch {
       /* The archive commit remains successful; cleanup will retry. */
     }
+  }
+  try {
+    await flushTimelineOutbox(account._id);
+    if (removedGameIds.length)
+      await db.gameActivityEvents.deleteMany({
+        userId: account._id,
+        gameId: { $in: removedGameIds },
+      });
+  } catch {
+    // Pending outbox records retry on read; orphaned deleted-game events are
+    // inaccessible and excluded from exports if cleanup is interrupted.
   }
   return { snapshot, revision: account.revision + 1 };
 }

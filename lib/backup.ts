@@ -2,6 +2,7 @@ import { z } from "zod";
 import { parseLibrary, mediaReferences } from "./library-schema";
 import type { LibrarySnapshot } from "@/types/game";
 import type { BackupManifest } from "@/types/backup";
+import { gameActivityEventSchema } from "./game-activity-schema";
 export const backupManifestSchema = z
   .object({
     format: z.literal("gamdow-archive"),
@@ -34,6 +35,7 @@ export const backupManifestSchema = z
           .strict(),
       )
       .max(10000),
+    timeline: z.array(gameActivityEventSchema).max(100_000).optional(),
   })
   .strict();
 export function archiveOnly(
@@ -101,5 +103,12 @@ export function validateBackup(
   const refs = mediaReferences(snapshot);
   if (refs.length !== unique.size || refs.some((id) => !unique.has(id)))
     throw new Error("Backup images and references do not match.");
+  const gameIds = new Set(snapshot.games.map((game) => game.id));
+  if (
+    manifest.timeline?.some((event) => !gameIds.has(event.gameId)) ||
+    new Set(manifest.timeline?.map((event) => event.id)).size !==
+      (manifest.timeline?.length ?? 0)
+  )
+    throw new Error("Backup timeline contains invalid or duplicate records.");
   return { ...manifest, library: archiveOnly(snapshot) };
 }

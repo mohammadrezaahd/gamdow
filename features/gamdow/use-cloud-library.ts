@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { LibraryResponse, SaveLibraryInput } from "@/types/api";
 import { libraryRepository } from "@/services/library-repository";
 import { ApiError } from "@/services/http-client";
@@ -21,15 +21,41 @@ export function useCloudLibrary(initial: LibraryResponse) {
   const [code, setCode] = useState("");
   const [cycle, setCycle] = useState(0);
   const saved = useRef(initial.snapshot);
+  const currentData = useRef(initial.snapshot);
   const revision = useRef(initial.revision);
   const inFlight = useRef(false);
   const attempt = useRef<SaveLibraryInput | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
+    currentData.current = data;
+  }, [data]);
+  useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
     };
+  }, []);
+  const refreshLibrary = useCallback(async () => {
+    if (
+      external.current ||
+      inFlight.current ||
+      currentData.current !== saved.current
+    )
+      return false;
+    const result = await libraryRepository.load();
+    if (result.snapshot.profile.id !== currentData.current.profile.id)
+      throw new Error("Your signed-in account changed. Reload to continue.");
+    saved.current = result.snapshot;
+    currentData.current = result.snapshot;
+    revision.current = result.revision;
+    attempt.current = null;
+    if (mounted.current) {
+      setData(result.snapshot);
+      setStatus("saved");
+      setError("");
+      setCode("");
+    }
+    return true;
   }, []);
   const dirty = data !== saved.current;
   useEffect(() => {
@@ -131,6 +157,7 @@ export function useCloudLibrary(initial: LibraryResponse) {
   };
   return {
     runServerOperation,
+    refreshLibrary,
     externalMessage,
     cancelExternal: () => {
       cancelRequested.current = true;

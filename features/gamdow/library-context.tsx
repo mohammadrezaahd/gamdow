@@ -3,6 +3,7 @@ import { StorageProvider } from "./storage/storage-context";
 import { adjustPlaytime, MAX_PLAYTIME_HOURS } from "@/lib/playtime";
 import type { ProfileInput } from "@/types/profile";
 import { normalizeTags } from "@/lib/tags";
+import { normalizeGameTracking } from "@/lib/game-activity";
 import { Button } from "@/components/ui";
 import {
   createContext,
@@ -43,6 +44,7 @@ export const today = () => {
 interface LibraryContextValue {
   data: LibrarySnapshot;
   runServerOperation: RunServerOperation;
+  refreshLibrary: () => Promise<boolean>;
   saveCategory: (mutation: TaxonomyMutation) => void;
   deleteCategory: (kind: TaxonomyKind, id: string) => void;
   saveProfile: (input: ProfileInput) => void;
@@ -78,6 +80,7 @@ export function LibraryProvider({
     code,
     retry,
     runServerOperation,
+    refreshLibrary,
     externalMessage,
     cancelExternal,
   } = useCloudLibrary(initial);
@@ -87,6 +90,7 @@ export function LibraryProvider({
     data,
     ready,
     runServerOperation,
+    refreshLibrary,
     hasUnsavedChanges: dirty,
     saveProfile: (input) => {
       const displayName = input.displayName.trim();
@@ -125,7 +129,11 @@ export function LibraryProvider({
         normalizeTaxonomies({
           ...d,
           games: upsert(d.games, {
-            ...game,
+            ...normalizeGameTracking(
+              d.games.find((item) => item.id === game.id),
+              game,
+              new Date().toISOString(),
+            ),
             tags: normalizeTags(game.tags),
             updatedAt: new Date().toISOString(),
           }),
@@ -143,8 +151,14 @@ export function LibraryProvider({
           if (nextMinutes < 0 || nextMinutes > MAX_PLAYTIME_HOURS * 60)
             return game;
           return {
-            ...game,
-            hoursPlayed: adjustPlaytime(game.hoursPlayed, deltaMinutes),
+            ...normalizeGameTracking(
+              game,
+              {
+                ...game,
+                hoursPlayed: adjustPlaytime(game.hoursPlayed, deltaMinutes),
+              },
+              new Date().toISOString(),
+            ),
             updatedAt: new Date().toISOString(),
           };
         }),

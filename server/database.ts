@@ -12,6 +12,7 @@ import type {
   SteamOwnedLibraryDocument,
 } from "./steam/models";
 import type { EpicConnectionDocument } from "./epic/connection";
+import type { GameActivityEventDocument } from "./game-activity/models";
 import { config } from "./config";
 export interface AccountDocument {
   _id: string;
@@ -24,6 +25,7 @@ export interface AccountDocument {
   legacySnapshot?: LibrarySnapshot;
   revision: number;
   lastMutationId?: string;
+  timelineOutbox?: GameActivityEventDocument[];
 }
 export interface SessionDocument {
   remember?: boolean;
@@ -82,6 +84,8 @@ export async function database() {
       throw error;
     });
   const db = (await state.gamdowMongo).db(c.dbName);
+  const gameActivityEvents =
+    db.collection<GameActivityEventDocument>("game_activity_events");
   const storageLocks = db.collection<{
     _id: string;
     owner: string;
@@ -116,6 +120,9 @@ export async function database() {
   );
   const steamState = db.collection<SteamStateDocument>("steam_state");
   state.gamdowIndexes ??= Promise.all([
+    gameActivityEvents.createIndex(
+      { userId: 1, gameId: 1, occurredAt: -1, id: -1 },
+    ),
     storageLocks.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     storageGrants.createIndex({ userId: 1 }),
     backupJobs.createIndex({ userId: 1, expiresAt: 1 }),
@@ -151,6 +158,7 @@ export async function database() {
     });
   await state.gamdowIndexes;
   return {
+    gameActivityEvents,
     storageLocks,
     storageGrants,
     backupJobs,
