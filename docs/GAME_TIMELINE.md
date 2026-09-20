@@ -38,7 +38,7 @@ that compatibility endpoint is read for the first time.
   preserves hidden-profile data instead of resetting it.
 
 Statistics uses the event's `occurredAt` for daily/monthly grouping and keeps
-`recordedAt` in the complete activity table, so a delayed Steam refresh remains
+`recordedAt` in the per-game history, so a delayed Steam refresh remains
 traceable.
 
 ## Backup behavior
