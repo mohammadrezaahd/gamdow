@@ -167,13 +167,13 @@ function JourneyChart({ events, game }: { events: GameActivityEvent[]; game: Gam
     (point) => point.hasProgress && point.progress !== undefined,
   );
   const usedStatuses = [...new Set(points.map((point) => point.status))];
-  const width = 860;
-  const height = 360;
-  const left = 52;
-  const right = 24;
-  const top = 32;
-  const plotHeight = 198;
-  const railY = 260;
+  const width = 720;
+  const height = 238;
+  const left = 44;
+  const right = 18;
+  const top = 24;
+  const plotHeight = 122;
+  const railY = 168;
   const plotWidth = width - left - right;
   const firstTime = points[0]?.timestamp ?? 0;
   const lastTime = points[points.length - 1]?.timestamp ?? 0;
@@ -208,7 +208,7 @@ function JourneyChart({ events, game }: { events: GameActivityEvent[]; game: Gam
         borderColor: "#d3fc7226",
       }}
     >
-      <Box sx={{ p: { xs: 2.5, md: 3.5 }, pb: 2 }}>
+      <Box sx={{ p: { xs: 2, md: 2.5 }, pb: 1.5 }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}
           sx={{ justifyContent: "space-between", gap: 2 }}
@@ -220,19 +220,19 @@ function JourneyChart({ events, game }: { events: GameActivityEvent[]; game: Gam
             >
               JOURNEY / PROGRESS TRACE
             </Typography>
-            <Typography variant="h4" sx={{ mt: 0.4 }}>
+            <Typography variant="h6" sx={{ mt: 0.35 }}>
               The shape of this playthrough
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-              Every point is a recorded day. The line changes color when the game changes state.
+            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+              Progress over time · color follows status
             </Typography>
           </Box>
           <Stack direction="row" spacing={1} sx={{ alignItems: "flex-start" }}>
             <Box
               sx={{
-                minWidth: 92,
-                px: 1.5,
-                py: 1.25,
+                minWidth: 78,
+                px: 1.25,
+                py: 1,
                 border: 1,
                 borderColor: "#d3fc7230",
                 borderRadius: 2,
@@ -262,7 +262,7 @@ function JourneyChart({ events, game }: { events: GameActivityEvent[]; game: Gam
 
       <Box sx={{ px: { xs: 1, md: 2 }, pb: 1 }}>
         <Box sx={{ overflowX: "auto" }}>
-          <Box sx={{ minWidth: { xs: 700, md: "100%" } }}>
+          <Box sx={{ minWidth: { xs: 540, md: "100%" } }}>
             <svg
               viewBox={`0 0 ${width} ${height}`}
               width="100%"
