@@ -10,7 +10,7 @@ All responses containing account data use `Cache-Control: no-store`. All writes 
 | GET | `/api/auth/session` | — | `AuthSession` or null |
 | GET | `/api/library` | — | `{ snapshot, revision }` |
 | PUT | `/api/library` | `{ snapshot, revision, mutationId }` | `{ revision }` |
-| GET | `/api/statistics` | — | archive-wide daily/monthly playtime and progress aggregates |
+| GET | `/api/statistics` | optional `genre`, `platform`, `status`, `source`, `favorite` | filtered daily/monthly playtime and progress aggregates |
 | POST | `/api/media` | raw JPEG/PNG/WebP body; matching Content-Type | `{ id, src, width, height }`, 201 |
 | GET | `/api/media/[id]` | — | private JPEG after ownership check |
 

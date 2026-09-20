@@ -121,7 +121,7 @@ export async function gameProgressActivity(
   account: AccountDocument,
   gameId: string,
 ): Promise<GameActivityEvent[]> {
-  if (!/^[\\w%.-]{1,5000}$/.test(gameId))
+  if (!/^[\w%.-]{1,5000}$/.test(gameId))
     throw new HttpError(404, "Game not found.", "NOT_FOUND");
   await flushTimelineOutbox(account._id);
   const { libraryView } = await import("../library-storage");
@@ -134,10 +134,9 @@ export async function gameProgressActivity(
     .find({
       userId: account._id,
       gameId,
-      type: { $in: ["PLAYTIME_UPDATED", "PROGRESS_UPDATED", "EXTERNAL_ACTIVITY"] },
+      type: { $ne: "BASELINE" },
     })
     .sort({ occurredAt: -1, id: -1 })
-    .limit(500)
     .toArray();
   return rows.map(publicEvent);
 }

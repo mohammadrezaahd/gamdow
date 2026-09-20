@@ -95,8 +95,24 @@ export interface ActivityFeedItem extends GameActivityEvent {
   gameTitle: string;
 }
 
+export interface ActivityStatisticsQuery {
+  genre?: string;
+  platform?: string;
+  status?: GameStatus;
+  source?: GameActivitySource;
+  favorite?: boolean;
+}
+
+export interface ActivityStatisticsAvailableFilters {
+  genres: string[];
+  platforms: string[];
+  statuses: GameStatus[];
+  sources: GameActivitySource[];
+}
+
 export interface ActivityStatistics {
   generatedAt: string;
+  availableFilters: ActivityStatisticsAvailableFilters;
   totalGames: number;
   trackedGames: number;
   totalMinutes: number;

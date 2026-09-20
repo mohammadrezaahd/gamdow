@@ -4,11 +4,13 @@ import { database } from "./database";
 import { flushTimelineOutbox } from "./game-activity/timeline";
 import { libraryView } from "./library-storage";
 import type { Game } from "@/types/game";
+import { statuses } from "@/lib/library-schema";
 import type {
   ActivityFeedItem,
   ActivityGameSummary,
   ActivityPeriodSummary,
   ActivityStatistics,
+  ActivityStatisticsQuery,
   GameActivityEvent,
 } from "@/types/game-activity";
 import type { GameActivityEventDocument } from "./game-activity/models";
@@ -125,6 +127,7 @@ function gameSummary(game: Game): ActivityGameSummary {
  */
 export async function activityStatistics(
   account: Pick<AccountDocument, "_id" | "snapshot">,
+  query: ActivityStatisticsQuery = {},
 ): Promise<ActivityStatistics> {
   await flushTimelineOutbox(account._id);
   const [snapshot, db] = await Promise.all([
@@ -137,9 +140,29 @@ export async function activityStatistics(
     .limit(MAX_EVENTS)
     .toArray();
 
-  const gamesById = new Map(snapshot.games.map((game) => [game.id, game]));
+  const availableFilters = {
+    genres: [...new Set(snapshot.games.flatMap((game) => game.genres))].sort(
+      (a, b) => a.localeCompare(b),
+    ),
+    platforms: [...new Set(snapshot.games.map((game) => game.platform))].sort(
+      (a, b) => a.localeCompare(b),
+    ),
+    statuses: [...statuses],
+    sources: [...new Set(snapshot.games.map((game) => game.source ?? "MANUAL"))].sort(),
+  };
+  const matchingGames = snapshot.games.filter((game) => {
+    const source = game.source ?? "MANUAL";
+    return (
+      (!query.genre || game.genres.includes(query.genre)) &&
+      (!query.platform || game.platform === query.platform) &&
+      (!query.status || game.status === query.status) &&
+      (!query.source || source === query.source) &&
+      (query.favorite === undefined || game.favorite === query.favorite)
+    );
+  });
+  const gamesById = new Map(matchingGames.map((game) => [game.id, game]));
   const games = new Map(
-    snapshot.games.map((game) => [game.id, gameSummary(game)]),
+    matchingGames.map((game) => [game.id, gameSummary(game)]),
   );
   const activeDaysByGame = new Map<string, Set<string>>();
   const monthly = new Map<string, ActivityPeriodSummary>();
@@ -178,7 +201,7 @@ export async function activityStatistics(
     }
   }
 
-  const totalMinutes = snapshot.games.reduce(
+  const totalMinutes = matchingGames.reduce(
     (total, game) => total + (game.hoursPlayed ? game.hoursPlayed * 60 : 0),
     0,
   );
@@ -186,8 +209,9 @@ export async function activityStatistics(
 
   return {
     generatedAt: new Date().toISOString(),
-    totalGames: snapshot.games.length,
-    trackedGames: snapshot.games.filter(
+    availableFilters,
+    totalGames: matchingGames.length,
+    trackedGames: matchingGames.filter(
       (game) => game.hoursPlayed !== undefined,
     ).length,
     totalMinutes: Math.round(totalMinutes),

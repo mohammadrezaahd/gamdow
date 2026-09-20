@@ -265,7 +265,11 @@ export function GameDetail({
               <PlaytimeControl game={game} />
               <ProgressControl game={game} />
             </Box>
-            <GameProgressHistory game={game} />
+            <GameProgressHistory
+              game={game}
+              compact
+              onOpenJournal={() => setTab(3)}
+            />
             <Typography color="text.secondary">
               Started: {game.startedAt || "Not recorded"} · Finished:{" "}
               {game.completedAt || "Not recorded"}
@@ -349,6 +353,8 @@ export function GameDetail({
         {tab === 2 && <GalleryPage gameId={game.id} onGame={onGame} />}
         {tab === 3 && (
           <Stack spacing={2}>
+            <GameProgressHistory game={game} />
+            <Divider />
             <Box
               component="form"
               onSubmit={(e) => {

@@ -3,12 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Box, CircularProgress, Paper, Stack, Typography } from "@mui/material";
 import { RefreshRounded } from "@mui/icons-material";
-import { Button, Chip, ToggleButton, ToggleButtonGroup } from "@/components/ui";
+import {
+  Button,
+  Chip,
+  MenuItem,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "@/components/ui";
 import { EmptyState, Metric, SectionTitle } from "@/components/page-parts";
 import { statisticsRepository } from "@/services/statistics-repository";
 import type {
   ActivityPeriodSummary,
   ActivityStatistics,
+  ActivityStatisticsQuery,
 } from "@/types/game-activity";
 
 const formatMinutes = (minutes: number) => {
@@ -190,13 +198,14 @@ export function StatisticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<"monthly" | "daily">("monthly");
+  const [filters, setFilters] = useState<ActivityStatisticsQuery>({});
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     statisticsRepository
-      .load(controller.signal)
+      .load(filters, controller.signal)
       .then((result) => {
         if (!controller.signal.aborted) {
           setStatistics(result);
@@ -215,7 +224,7 @@ export function StatisticsPage() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [refresh]);
+  }, [filters, refresh]);
 
   useEffect(() => {
     const reload = () => setRefresh((value) => value + 1);
@@ -232,6 +241,15 @@ export function StatisticsPage() {
     () => (current ? (period === "monthly" ? current.monthly : current.daily) : []),
     [current, period],
   );
+  const setFilter = <K extends keyof ActivityStatisticsQuery>(
+    key: K,
+    value: ActivityStatisticsQuery[K] | undefined,
+  ) =>
+    setFilters((existing) => ({
+      ...existing,
+      [key]: value === undefined || value === "" ? undefined : value,
+    }));
+  const filtersActive = Object.values(filters).some((value) => value !== undefined);
 
   return (
     <>
@@ -250,6 +268,104 @@ export function StatisticsPage() {
         }
       />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {current && (
+        <Paper sx={{ p: { xs: 2, md: 2.5 }, mb: 3 }}>
+          <Stack
+            direction={{ xs: "column", lg: "row" }}
+            spacing={1.5}
+            sx={{ alignItems: { lg: "center" } }}
+          >
+            <Box sx={{ mr: { lg: "auto" } }}>
+              <Typography variant="h6">Filter the archive</Typography>
+              <Typography variant="caption" color="text.secondary">
+                See your rhythm by genre, platform, status or source.
+              </Typography>
+            </Box>
+            <TextField
+              select
+              size="small"
+              label="Genre"
+              value={filters.genre ?? ""}
+              onChange={(event) => setFilter("genre", event.target.value || undefined)}
+              sx={{ minWidth: { lg: 150 } }}
+            >
+              <MenuItem value="">All genres</MenuItem>
+              {current.availableFilters.genres.map((genre) => (
+                <MenuItem key={genre} value={genre}>{genre}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Platform"
+              value={filters.platform ?? ""}
+              onChange={(event) => setFilter("platform", event.target.value || undefined)}
+              sx={{ minWidth: { lg: 140 } }}
+            >
+              <MenuItem value="">All platforms</MenuItem>
+              {current.availableFilters.platforms.map((platform) => (
+                <MenuItem key={platform} value={platform}>{platform}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Status"
+              value={filters.status ?? ""}
+              onChange={(event) =>
+                setFilter(
+                  "status",
+                  (event.target.value || undefined) as ActivityStatisticsQuery["status"],
+                )
+              }
+              sx={{ minWidth: { lg: 140 } }}
+            >
+              <MenuItem value="">All statuses</MenuItem>
+              {current.availableFilters.statuses.map((status) => (
+                <MenuItem key={status} value={status}>{status}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Source"
+              value={filters.source ?? ""}
+              onChange={(event) =>
+                setFilter(
+                  "source",
+                  (event.target.value || undefined) as ActivityStatisticsQuery["source"],
+                )
+              }
+              sx={{ minWidth: { lg: 125 } }}
+            >
+              <MenuItem value="">All sources</MenuItem>
+              {current.availableFilters.sources.map((source) => (
+                <MenuItem key={source} value={source}>{source}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              size="small"
+              label="Favorites"
+              value={filters.favorite === undefined ? "" : String(filters.favorite)}
+              onChange={(event) =>
+                setFilter(
+                  "favorite",
+                  event.target.value === "" ? undefined : event.target.value === "true",
+                )
+              }
+              sx={{ minWidth: { lg: 125 } }}
+            >
+              <MenuItem value="">All games</MenuItem>
+              <MenuItem value="true">Favorites</MenuItem>
+              <MenuItem value="false">Not favorites</MenuItem>
+            </TextField>
+            {filtersActive && (
+              <Button onClick={() => setFilters({})}>Clear</Button>
+            )}
+          </Stack>
+        </Paper>
+      )}
       {loading && !current ? (
         <Paper sx={{ p: 5, display: "grid", placeItems: "center" }}>
           <CircularProgress aria-label="Loading statistics" />
@@ -257,10 +373,15 @@ export function StatisticsPage() {
             Building your activity report…
           </Typography>
         </Paper>
-      ) : !current || !current.totalGames ? (
+      ) : !current ? (
         <EmptyState
           title="Your story is just beginning"
           description="Add games and record progress or playtime to see the activity chart."
+        />
+      ) : !current.totalGames ? (
+        <EmptyState
+          title="No games match these filters"
+          description="Clear one or more filters to see more of your activity."
         />
       ) : (
         <Stack spacing={3}>

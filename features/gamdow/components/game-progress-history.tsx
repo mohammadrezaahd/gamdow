@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CircularProgress, Paper, Stack, Typography, Box } from "@mui/material";
-import { Chip } from "@/components/ui";
+import { Button, Chip } from "@/components/ui";
 import { gameActivityRepository } from "@/services/game-activity-repository";
 import type { Game } from "@/types/game";
 import type { GameActivityEvent } from "@/types/game-activity";
@@ -29,6 +29,7 @@ interface DayActivity {
   progressChanged: number;
   progress?: number;
   hasProgress: boolean;
+  statuses: string[];
   sources: Set<string>;
 }
 
@@ -42,10 +43,16 @@ function groupByDay(events: GameActivityEvent[]) {
         playtimeChanged: 0,
         progressChanged: 0,
         hasProgress: false,
+        statuses: [],
         sources: new Set<string>(),
       };
     days.set(date, day);
     day.sources.add(event.source);
+    if (event.type === "STATUS_CHANGED" && event.fromStatus && event.toStatus)
+      day.statuses.push(`${event.fromStatus} → ${event.toStatus}`);
+    else if (event.type === "STARTED") day.statuses.push("Started playing");
+    else if (event.type === "COMPLETED") day.statuses.push("Completed");
+    else if (event.type === "COMPLETION_CLEARED") day.statuses.push("Completion reopened");
     if (event.type === "PLAYTIME_UPDATED" || event.type === "EXTERNAL_ACTIVITY") {
       day.playtimeChanged += event.deltaMinutes ?? 0;
       day.playtimeTotal ??= event.totalMinutes;
@@ -61,7 +68,15 @@ function groupByDay(events: GameActivityEvent[]) {
   return [...days.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-export function GameProgressHistory({ game }: { game: Game }) {
+export function GameProgressHistory({
+  game,
+  compact = false,
+  onOpenJournal,
+}: {
+  game: Game;
+  compact?: boolean;
+  onOpenJournal?: () => void;
+}) {
   const [events, setEvents] = useState<GameActivityEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -104,6 +119,7 @@ export function GameProgressHistory({ game }: { game: Game }) {
   }, [load]);
 
   const days = groupByDay(events);
+  const visibleDays = compact ? days.slice(0, 3) : days;
 
   return (
     <Paper sx={{ p: { xs: 2, md: 3 } }}>
@@ -112,9 +128,11 @@ export function GameProgressHistory({ game }: { game: Game }) {
         sx={{ justifyContent: "space-between", gap: 1.5, mb: 2.5 }}
       >
         <Box>
-          <Typography variant="h5">Progress & playtime history</Typography>
+          <Typography variant="h5">{compact ? "Recent activity" : "Progress journal"}</Typography>
           <Typography variant="body2" color="text.secondary">
-            Daily record of what you played and how far you got.
+            {compact
+              ? "A quick view of your latest play and progress."
+              : "A complete daily record of what you played and how far you got."}
           </Typography>
         </Box>
         <Chip size="small" label={`${days.length} active days`} />
@@ -132,12 +150,15 @@ export function GameProgressHistory({ game }: { game: Game }) {
         </Typography>
       ) : (
         <Stack spacing={1.25}>
-          {days.map((day) => (
+          {visibleDays.map((day) => (
             <Box
               key={day.date}
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "minmax(130px,.7fr) 1fr 1fr" },
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "minmax(130px,.7fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)",
+                },
                 gap: { xs: 1, sm: 2 },
                 alignItems: "center",
                 p: 1.5,
@@ -184,9 +205,22 @@ export function GameProgressHistory({ game }: { game: Game }) {
                     : "No progress change"}
                 </Typography>
               </Box>
+              <Box>
+                <Typography variant="overline" color="text.secondary">
+                  STATUS
+                </Typography>
+                <Typography>
+                  {day.statuses.length ? day.statuses.join(" · ") : "No status change"}
+                </Typography>
+              </Box>
             </Box>
           ))}
         </Stack>
+      )}
+      {compact && days.length > visibleDays.length && onOpenJournal && (
+        <Button onClick={onOpenJournal} sx={{ mt: 2, alignSelf: "flex-start" }}>
+          Open full progress journal
+        </Button>
       )}
     </Paper>
   );
