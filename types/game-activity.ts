@@ -32,7 +32,7 @@ export interface GameActivityEvent {
 }
 
 export interface GameStatusSuggestion {
-  status: Extract<GameStatus, "Playing" | "On hold">;
+  status: Extract<GameStatus, "Not started" | "Playing" | "On hold">;
   source: Extract<GameActivitySource, "STEAM" | "EPIC">;
   confidence: "high" | "medium" | "low";
   reason: string;
@@ -52,4 +52,51 @@ export interface GameTimelinePage {
   items: GameActivityEvent[];
   nextCursor?: string;
   statusSuggestion?: GameStatusSuggestion;
+}
+
+/** Aggregates used by the archive-wide Statistics page. */
+export interface ActivityPeriodSummary {
+  period: string;
+  eventCount: number;
+  activeGames: number;
+  statusChanges: number;
+  playtimeUpdates: number;
+  minutesChanged: number;
+  minutesGained: number;
+  started: number;
+  completed: number;
+}
+
+export interface ActivityGameSummary {
+  gameId: string;
+  title: string;
+  source: GameActivitySource;
+  status: GameStatus;
+  totalMinutes: number;
+  eventCount: number;
+  statusChanges: number;
+  playtimeUpdates: number;
+  minutesChanged: number;
+  activeDays: number;
+  firstActivityAt?: string;
+  lastActivityAt?: string;
+}
+
+export interface ActivityFeedItem extends GameActivityEvent {
+  gameTitle: string;
+}
+
+export interface ActivityStatistics {
+  generatedAt: string;
+  totalGames: number;
+  trackedGames: number;
+  totalMinutes: number;
+  totalEvents: number;
+  activeDays: number;
+  statusChanges: number;
+  playtimeUpdates: number;
+  monthly: ActivityPeriodSummary[];
+  daily: ActivityPeriodSummary[];
+  games: ActivityGameSummary[];
+  activities: ActivityFeedItem[];
 }

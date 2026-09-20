@@ -269,7 +269,11 @@ export function GameForm({
               type="number"
               slotProps={{ htmlInput: { min: 0, max: 100 } }}
               value={draft.manualProgress ?? ""}
-              helperText="Your own estimate. Separate from Steam playtime and achievements."
+              helperText={
+                draft.source === "STEAM"
+                  ? "Your own estimate. Steam playtime is synced automatically."
+                  : "Your own estimate, separate from playtime."
+              }
               onChange={(e) =>
                 field(
                   "manualProgress",
@@ -325,7 +329,11 @@ export function GameForm({
                 ))}
               </TextField>
               <TextField
-                label="Manually logged hours"
+                label={
+                  draft.source === "STEAM"
+                    ? "Steam hours (synced)"
+                    : "Manually logged hours"
+                }
                 type="number"
                 slotProps={{ htmlInput: { min: 0, step: 0.1 } }}
                 value={draft.hoursPlayed ?? ""}

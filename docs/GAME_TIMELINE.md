@@ -1,42 +1,47 @@
-# Game activity timeline
+# Activity tracking and Statistics
 
-The timeline is a per-user append-only read model. It does not mix public game
-metadata with personal progress.
+Gamdow keeps a per-user append-only activity read model. The activity is no
+longer shown as a per-game Timeline tab; the Statistics page is the single
+archive-wide view for status changes, playtime changes and provider activity.
 
 ## Data flow
 
-- `lib/game-activity.ts` owns pure date/status invariants and provider inference.
+- `lib/game-activity.ts` owns date invariants and provider status/playtime rules.
 - `server/library-storage.ts` derives manual events while committing the archive.
 - The same MongoDB account update stores those events in `timelineOutbox`.
 - `server/game-activity/timeline.ts` idempotently projects the outbox into
-  `game_activity_events`; an interrupted projection is retried on the next read.
-- `server/steam/playtime-sync.ts` is the provider adapter. Both initial import
-  and later activity refresh use it, so playtime inference is not duplicated.
-- `GameTimeline` is a presentational component. The panel/repository supply its
-  serializable DTOs and callbacks.
+  `game_activity_events`.
+- `server/statistics.ts` joins the read model with the current library and
+  returns daily, monthly, per-game and complete activity-log aggregates.
+- `server/steam/playtime-sync.ts` is the provider adapter. Imports and later
+  refreshes use the same reconciliation path, so Steam changes are recorded
+  consistently.
 
-No destructive migration is required. A legacy game receives one baseline
-event the first time its timeline is read.
+The old game activity endpoint remains available as an internal/read-compatible
+API for existing data and backups, but it is not linked from game detail. No
+destructive migration is required. A legacy game receives a baseline event when
+that compatibility endpoint is read for the first time.
 
-## Status rules
+## Activity rules
 
-- First explicit `Playing` status or first increase in manual playtime sets
-  `startedAt` when it is empty.
-- `Completed` sets `completedAt`; changing to any other status clears it.
-- A positive Steam playtime delta can move `Not started` or `On hold` to
-  `Playing` and can infer the first start date.
-- Inactivity can only create an `On hold` suggestion for the user to approve.
-- Steam playtime and achievements never imply story completion. `Completed`
-  remains an explicit user decision.
+- Every status change and manual playtime change is recorded as an event.
+- Steam playtime is authoritative for linked Steam games. A changed Steam total
+  updates `hoursPlayed` in the archive and creates a playtime activity record.
+- A Steam game with verified zero playtime becomes `Not started`.
+- A Steam game with playtime and no recorded Steam session for at least 21 days
+  becomes `On hold`.
+- A positive Steam playtime signal can set a game to `Playing` when it is not
+  stale. Steam never fabricates story completion.
+- Omitted Steam playtime remains unknown; it is not treated as zero, which
+  preserves hidden-profile data instead of resetting it.
 
-Steam and Epic activity implement the shared `ExternalGameActivity` contract.
-Epic identity is currently supported, but Epic does not expose the equivalent
-cross-library playtime feed used by the Steam adapter, so no activity is
-fabricated.
+Statistics uses the event's `occurredAt` for daily/monthly grouping and keeps
+`recordedAt` in the complete activity table, so a delayed Steam refresh remains
+traceable.
 
 ## Backup behavior
 
-Timeline events are included in the portable archive. Event IDs are remapped on
+Activity events are included in the portable archive. Event IDs are remapped on
 restore, while game IDs remain attached to the restored library. Provider
-credentials, external account identities, billing and subscription data are
-not part of the manifest.
+credentials, external account identities, billing and subscription data are not
+part of the manifest.

@@ -28,7 +28,6 @@ import { statuses } from "@/services/library-repository";
 import { newId, today, useLibrary } from "./library-context";
 import { ReviewForm } from "./forms/review-form";
 import { GalleryPage } from "./pages/gallery-page";
-import { GameTimelinePanel } from "./components/game-timeline-panel";
 export function GameDetail({
   game,
   onBack,
@@ -200,7 +199,6 @@ export function GameDetail({
           <Tab label="Review" />
           <Tab label="Gallery" />
           <Tab label="Journal" />
-          <Tab label="Timeline" />
         </Tabs>
         {tab === 0 && (
           <Stack spacing={3}>
@@ -289,22 +287,7 @@ export function GameDetail({
                 Manage details & collections
               </Button>
             </Box>
-            <Divider />
-            <Box>
-              <Stack
-                direction="row"
-                sx={{ justifyContent: "space-between", alignItems: "center", mb: 1.5 }}
-              >
-                <Box>
-                  <Typography variant="h5">Game timeline</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Your personal play history and activity changes.
-                  </Typography>
-                </Box>
-                <Button onClick={() => setTab(4)}>Open full timeline</Button>
-              </Stack>
-              <GameTimelinePanel game={game} />
-            </Box>
+
           </Stack>
         )}
         {tab === 1 && (
@@ -451,7 +434,6 @@ export function GameDetail({
             )}
           </Stack>
         )}
-        {tab === 4 && <GameTimelinePanel game={game} />}
       </Paper>
       <SteamGamePanel game={game} onMetadata={setSteamMetadata} />
       {review && <ReviewForm game={game} onClose={() => setReview(false)} />}

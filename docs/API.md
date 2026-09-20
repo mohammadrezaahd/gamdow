@@ -10,6 +10,7 @@ All responses containing account data use `Cache-Control: no-store`. All writes 
 | GET | `/api/auth/session` | — | `AuthSession` or null |
 | GET | `/api/library` | — | `{ snapshot, revision }` |
 | PUT | `/api/library` | `{ snapshot, revision, mutationId }` | `{ revision }` |
+| GET | `/api/statistics` | — | archive-wide daily/monthly, per-game and complete activity aggregates |
 | POST | `/api/media` | raw JPEG/PNG/WebP body; matching Content-Type | `{ id, src, width, height }`, 201 |
 | GET | `/api/media/[id]` | — | private JPEG after ownership check |
 
@@ -47,4 +48,4 @@ Schema validation is in `lib/library-schema.ts`. The aggregate is bounded to 3 M
 
 Epic capabilities currently report `libraryImport: false`, `playtime: false`, `achievements: false`. There is no cross-game Epic sync endpoint; official EAS identity linking does not grant that capability.
 
-Steam game details additionally return `ownership.state`: `owned`, `not_owned`, or `unknown`, with `checkedAt` when known. This is based on a fresh, successful Owned Games snapshot for the connected account; absent/private/stale responses remain unknown. This is a library membership indication, not a payment receipt or a security entitlement. The UI offers `steam://run/<AppId>` for owned games and an external store purchase link for absent, paid games. Manual playtime adjustments use the existing revision-checked library save path and never update Steam playtime or story progress.
+Steam game details additionally return `ownership.state`: `owned`, `not_owned`, or `unknown`, with `checkedAt` when known. This is based on a fresh, successful Owned Games snapshot for the connected account; absent/private/stale responses remain unknown. This is a library membership indication, not a payment receipt or a security entitlement. The UI offers `steam://run/<AppId>` for owned games and an external store purchase link for absent, paid games. Steam playtime is synced into linked games and every changed total is recorded in Statistics; a manual adjustment uses the existing revision-checked library save path, does not update Steam, and may be replaced by the next Steam refresh. Story progress remains manual.

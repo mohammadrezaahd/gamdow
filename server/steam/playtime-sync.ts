@@ -77,7 +77,8 @@ export async function reconcileSteamPlaytime(
     );
     if (
       result.game.status !== game.status ||
-      result.game.startedAt !== game.startedAt
+      result.game.startedAt !== game.startedAt ||
+      result.game.hoursPlayed !== game.hoursPlayed
     ) {
       trackingChanged = true;
       Object.assign(game, result.game);

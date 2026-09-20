@@ -7,7 +7,10 @@ import type {
 } from "@/types/game-activity";
 
 const DAY_MS = 86_400_000;
-const INACTIVITY_DAYS = 30;
+// Steam's activity feed should move a game to On hold after three weeks
+// without a recorded play session. Keep this in one shared rule so imports and
+// background refreshes behave identically.
+const INACTIVITY_DAYS = 21;
 const RECENT_ACTIVITY_DAYS = 14;
 
 const datePart = (timestamp: string) => timestamp.slice(0, 10);
@@ -73,7 +76,14 @@ export function deriveGameActivity(
   candidate: Game,
   context: ActivityMutationContext,
 ): { game: Game; events: GameActivityEvent[] } {
-  const game = normalizeGameTracking(previous, candidate, context.now);
+  const normalized = normalizeGameTracking(previous, candidate, context.now);
+  // Provider policy is authoritative during a Steam refresh. In particular,
+  // normalizeGameTracking's generic first-play rule must not turn a stale
+  // Steam game back into Playing merely because its imported total changed.
+  const game =
+    context.source === "STEAM" && candidate.status !== "Playing"
+      ? { ...normalized, status: candidate.status }
+      : normalized;
   const events: GameActivityEvent[] = [];
   const add = (
     value: Omit<
@@ -169,9 +179,12 @@ export function inferStatusFromExternalActivity(
   previous: ExternalGameActivity | undefined,
   current: ExternalGameActivity,
 ): GameStatusSuggestion | undefined {
-  const total = current.totalMinutes ?? 0;
+  // An omitted Steam playtime means that the profile did not expose it; it is
+  // not the same thing as a verified zero-minute game.
+  const total = current.totalMinutes;
   const before = previous?.totalMinutes;
-  const delta = before === undefined ? undefined : total - before;
+  const delta =
+    before === undefined || total === undefined ? undefined : total - before;
   const lastActivity = current.lastPlayedAt
     ? Date.parse(current.lastPlayedAt)
     : Number.NaN;
@@ -179,11 +192,37 @@ export function inferStatusFromExternalActivity(
     ? (Date.parse(current.observedAt) - lastActivity) / DAY_MS
     : Number.POSITIVE_INFINITY;
 
+  // Steam's two explicit archive rules take priority over inferred "Playing".
+  // The caller applies these suggestions automatically; they are returned here
+  // as suggestions as well so the rule stays easy to test and reuse.
+  if (current.source === "STEAM" && total === 0 && game.status !== "Not started")
+    return {
+      status: "Not started",
+      source: current.source,
+      confidence: "high",
+      reason: "Steam reports zero minutes played.",
+      observedAt: current.observedAt,
+      lastActivityAt: current.lastPlayedAt,
+    };
+
   if (
-    delta !== undefined &&
-    delta > 0 &&
-    game.status !== "Playing"
+    current.source === "STEAM" &&
+    total !== undefined &&
+    total > 0 &&
+    Number.isFinite(lastActivity) &&
+    ageDays >= INACTIVITY_DAYS &&
+    game.status !== "On hold"
   )
+    return {
+      status: "On hold",
+      source: current.source,
+      confidence: "high",
+      reason: `Steam has no recorded play session for ${Math.floor(ageDays)} days.`,
+      observedAt: current.observedAt,
+      lastActivityAt: current.lastPlayedAt,
+    };
+
+  if (delta !== undefined && delta > 0 && game.status !== "Playing")
     return {
       status: "Playing",
       source: current.source,
@@ -195,6 +234,7 @@ export function inferStatusFromExternalActivity(
 
   if (
     before === undefined &&
+    total !== undefined &&
     total > 0 &&
     (current.recentMinutes ?? 0) > 0 &&
     ageDays <= RECENT_ACTIVITY_DAYS &&
@@ -210,8 +250,10 @@ export function inferStatusFromExternalActivity(
     };
 
   if (
+    total !== undefined &&
     total > 0 &&
     game.status === "Playing" &&
+    Number.isFinite(lastActivity) &&
     ageDays >= INACTIVITY_DAYS
   )
     return {
@@ -225,8 +267,10 @@ export function inferStatusFromExternalActivity(
 
   if (
     before === undefined &&
+    total !== undefined &&
     total > 0 &&
     game.status === "Not started" &&
+    Number.isFinite(lastActivity) &&
     ageDays >= INACTIVITY_DAYS
   )
     return {
@@ -258,13 +302,36 @@ export function reconcileExternalGameActivity(
     (!!current.lastPlayedAt && current.lastPlayedAt !== previous?.lastPlayedAt);
   const suggestion = inferStatusFromExternalActivity(game, previous, current);
   const next = { ...game };
+  const playtimeChanged =
+    after !== undefined &&
+    (next.hoursPlayed === undefined ||
+      Math.round(next.hoursPlayed * 60) !== after);
 
-  if ((after ?? 0) > 0 && !next.startedAt)
+  // Steam is the source of truth for linked-game playtime. Keeping the value
+  // on the archive record means the library, statistics and detail views all
+  // show the same number after a refresh (including a decrease/reset).
+  if (current.source === "STEAM" && after !== undefined)
+    next.hoursPlayed = after / 60;
+
+  if (after !== undefined && after > 0 && !next.startedAt)
     next.startedAt = datePart(current.lastPlayedAt || current.observedAt);
 
-  // Only a positive activity signal is auto-applied. Terminal states are never
-  // overwritten: playing after completion may simply be a replay.
+  // Steam's explicit zero/inactivity rules are applied automatically. Other
+  // providers only apply a high-confidence positive signal, and never replace
+  // an explicit terminal state.
   if (
+    current.source === "STEAM" &&
+    after === 0 &&
+    suggestion?.status === "Not started"
+  )
+    next.status = "Not started";
+  else if (
+    current.source === "STEAM" &&
+    suggestion?.status === "On hold" &&
+    suggestion.confidence === "high"
+  )
+    next.status = "On hold";
+  else if (
     suggestion?.status === "Playing" &&
     suggestion.confidence === "high" &&
     ["Not started", "On hold"].includes(next.status)
@@ -274,10 +341,16 @@ export function reconcileExternalGameActivity(
   const actionableSuggestion =
     suggestion && suggestion.status !== next.status ? suggestion : undefined;
 
+  // A changed total is represented by the normal PLAYTIME_UPDATED event after
+  // commitLibrary compares the old and new archive snapshots. Keep the
+  // provider event only for last-played changes without a total change; this
+  // avoids showing the same Steam playtime delta twice while preserving the
+  // fact that a session timestamp changed.
+  const timestampOnlyChange = activityChanged && !playtimeChanged;
   return {
     game: next,
     suggestion: actionableSuggestion,
-    event: activityChanged
+    event: timestampOnlyChange
       ? {
           id: eventId,
           gameId: game.id,

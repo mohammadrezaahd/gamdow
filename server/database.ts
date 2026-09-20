@@ -123,6 +123,7 @@ export async function database() {
     gameActivityEvents.createIndex(
       { userId: 1, gameId: 1, occurredAt: -1, id: -1 },
     ),
+    gameActivityEvents.createIndex({ userId: 1, occurredAt: -1, id: -1 }),
     storageLocks.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
     storageGrants.createIndex({ userId: 1 }),
     backupJobs.createIndex({ userId: 1, expiresAt: 1 }),

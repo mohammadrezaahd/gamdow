@@ -47,7 +47,7 @@ These scripts use Node's `--env-file` support and work in Windows shells. Vercel
 - `types/`: interfaces for domain data, API payloads and authentication.
 - `services/`: typed HTTP adapters. The client never receives a MongoDB or Blob credential.
 - `features/gamdow/use-cloud-library.ts`: serial, revisioned autosave with retry/idempotency, visible sync status and protection against overwriting another tab's changes.
-- `lib/game-activity.ts` + `server/game-activity/`: shared tracking rules and an idempotent per-user timeline projection.
+- `lib/game-activity.ts` + `server/game-activity/` + `server/statistics.ts`: shared tracking rules, idempotent activity projection and archive-wide daily/monthly statistics.
 - `components/ui/`: shared controls, fixed-aspect crop/upload, tag input and drag-and-drop.
 
 All current UI actions persist through the authenticated library API: games, status/plan/reorder, reviews/scores, journal, gallery, collections, genres/series, tags, preferences and profile. Media uploads are separate binary requests; snapshots contain only owned media references.

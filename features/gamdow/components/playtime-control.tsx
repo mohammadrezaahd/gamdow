@@ -19,7 +19,7 @@ export function PlaytimeControl({ game }: { game: Game }) {
   return (
     <Paper sx={{ p: 2, minWidth: 0 }}>
       <Typography variant="caption">
-        {game.source === "STEAM" ? "Personally recorded time" : "Time played"}
+        {game.source === "STEAM" ? "Steam playtime" : "Time played"}
       </Typography>
       <Typography aria-live="polite" sx={{ fontSize: 22, my: 1 }}>
         {formatPlaytime(game.hoursPlayed)}
@@ -72,7 +72,7 @@ export function PlaytimeControl({ game }: { game: Game }) {
       </Box>
       {game.source === "STEAM" && (
         <Typography variant="caption" color="text.secondary">
-          Independent of Steam playtime and game progress.
+          Synced from Steam on refresh; Steam is the source of truth.
         </Typography>
       )}
     </Paper>

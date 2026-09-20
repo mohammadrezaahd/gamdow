@@ -73,7 +73,7 @@ UI مرحله‌ها را پشت‌سرهم پردازش می‌کند. Pause پ
 
 سه metric مستقل داریم:
 
-- `manualProgress` و `hoursPlayed`: تخمین progress و زمان دستی gamdow، توسط کاربر قابل ویرایش.
+- `manualProgress`: پیشرفت دستی بازی. برای بازی‌های متصل به Steam، `hoursPlayed` از playtime استیم همگام می‌شود و تغییر آن در آمار فعالیت ثبت می‌شود؛ برای بازی‌های دستی، زمان توسط کاربر قابل ویرایش است.
 - `SteamPlaytime`: دقیقهٔ کل، دو هفتهٔ اخیر و زمان آخرین بازی، فقط در صورت ارائهٔ API. فیلد غایب صفر فرض نمی‌شود.
 - `SteamAchievementProgress`: نسبت unlock به تعریف Achievement؛ هرگز Story Progress فرض نمی‌شود.
 
