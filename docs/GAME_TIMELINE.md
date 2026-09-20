@@ -12,7 +12,7 @@ archive-wide view for status changes, playtime changes and provider activity.
 - `server/game-activity/timeline.ts` idempotently projects the outbox into
   `game_activity_events`.
 - `server/statistics.ts` joins the read model with the current library and
-  returns daily, monthly, per-game and complete activity-log aggregates.
+  returns daily and monthly playtime/progress aggregates for the chart.
 - `server/steam/playtime-sync.ts` is the provider adapter. Imports and later
   refreshes use the same reconciliation path, so Steam changes are recorded
   consistently.
@@ -24,7 +24,9 @@ that compatibility endpoint is read for the first time.
 
 ## Activity rules
 
-- Every status change and manual playtime change is recorded as an event.
+- Every status change, manual playtime change and manual progress change is
+  recorded as an event. Progress events keep the previous value, new value and
+  percentage-point delta.
 - Steam playtime is authoritative for linked Steam games. A changed Steam total
   updates `hoursPlayed` in the archive and creates a playtime activity record.
 - A Steam game with verified zero playtime becomes `Not started`.

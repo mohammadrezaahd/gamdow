@@ -12,6 +12,7 @@ export type GameActivityEventType =
   | "START_DATE_CHANGED"
   | "START_DATE_CLEARED"
   | "PLAYTIME_UPDATED"
+  | "PROGRESS_UPDATED"
   | "COMPLETION_DATE_CHANGED"
   | "EXTERNAL_ACTIVITY";
 
@@ -27,6 +28,9 @@ export interface GameActivityEvent {
   previousMinutes?: number;
   totalMinutes?: number;
   deltaMinutes?: number;
+  previousProgress?: number;
+  progress?: number;
+  deltaProgress?: number;
   inferred?: boolean;
   note?: string;
 }
@@ -63,6 +67,9 @@ export interface ActivityPeriodSummary {
   playtimeUpdates: number;
   minutesChanged: number;
   minutesGained: number;
+  progressUpdates: number;
+  progressChanged: number;
+  progressGained: number;
   started: number;
   completed: number;
 }
@@ -76,7 +83,9 @@ export interface ActivityGameSummary {
   eventCount: number;
   statusChanges: number;
   playtimeUpdates: number;
+  progressUpdates: number;
   minutesChanged: number;
+  progressChanged: number;
   activeDays: number;
   firstActivityAt?: string;
   lastActivityAt?: string;
@@ -95,6 +104,7 @@ export interface ActivityStatistics {
   activeDays: number;
   statusChanges: number;
   playtimeUpdates: number;
+  progressUpdates: number;
   monthly: ActivityPeriodSummary[];
   daily: ActivityPeriodSummary[];
   games: ActivityGameSummary[];

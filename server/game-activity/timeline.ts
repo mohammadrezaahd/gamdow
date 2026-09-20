@@ -117,6 +117,31 @@ async function ensureLegacyBaseline(
   }
 }
 
+export async function gameProgressActivity(
+  account: AccountDocument,
+  gameId: string,
+): Promise<GameActivityEvent[]> {
+  if (!/^[\\w%.-]{1,5000}$/.test(gameId))
+    throw new HttpError(404, "Game not found.", "NOT_FOUND");
+  await flushTimelineOutbox(account._id);
+  const { libraryView } = await import("../library-storage");
+  const game = (await libraryView(account)).games.find(
+    (item) => item.id === gameId,
+  );
+  if (!game) throw new HttpError(404, "Game not found.", "NOT_FOUND");
+  const db = await database();
+  const rows = await db.gameActivityEvents
+    .find({
+      userId: account._id,
+      gameId,
+      type: { $in: ["PLAYTIME_UPDATED", "PROGRESS_UPDATED", "EXTERNAL_ACTIVITY"] },
+    })
+    .sort({ occurredAt: -1, id: -1 })
+    .limit(500)
+    .toArray();
+  return rows.map(publicEvent);
+}
+
 export async function gameTimeline(
   account: AccountDocument,
   gameId: string,

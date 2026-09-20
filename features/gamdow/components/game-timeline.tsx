@@ -21,6 +21,7 @@ const labels: Record<GameActivityEvent["type"], string> = {
   START_DATE_CHANGED: "Start date changed",
   START_DATE_CLEARED: "Start date cleared",
   PLAYTIME_UPDATED: "Manual playtime updated",
+  PROGRESS_UPDATED: "Progress updated",
   COMPLETION_DATE_CHANGED: "Completion date changed",
   EXTERNAL_ACTIVITY: "External play session synced",
 };
@@ -44,6 +45,13 @@ const detail = (item: GameActivityEvent) => {
       ? `${item.deltaMinutes > 0 ? "+" : "−"}${duration(Math.abs(item.deltaMinutes))}`
       : undefined;
     return [total && `${total} total`, delta].filter(Boolean).join(" · ");
+  }
+  if (item.type === "PROGRESS_UPDATED") {
+    const progress = item.progress === undefined ? "cleared" : `${item.progress}%`;
+    const delta = item.deltaProgress
+      ? `${item.deltaProgress > 0 ? "+" : "−"}${Math.abs(item.deltaProgress)} pts`
+      : undefined;
+    return [progress, delta].filter(Boolean).join(" · ");
   }
   return item.note;
 };

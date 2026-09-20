@@ -24,6 +24,9 @@ function emptyPeriod(period: string): ActivityPeriodSummary {
     playtimeUpdates: 0,
     minutesChanged: 0,
     minutesGained: 0,
+    progressUpdates: 0,
+    progressChanged: 0,
+    progressGained: 0,
     started: 0,
     completed: 0,
   };
@@ -45,6 +48,11 @@ function updatePeriod(
     summary.playtimeUpdates += 1;
     summary.minutesChanged += event.deltaMinutes ?? 0;
     summary.minutesGained += Math.max(0, event.deltaMinutes ?? 0);
+  }
+  if (event.type === "PROGRESS_UPDATED") {
+    summary.progressUpdates += 1;
+    summary.progressChanged += event.deltaProgress ?? 0;
+    summary.progressGained += Math.max(0, event.deltaProgress ?? 0);
   }
   periods.set(key, summary);
 }
@@ -86,6 +94,10 @@ function mergeActivity(
     summary.playtimeUpdates += 1;
     summary.minutesChanged += event.deltaMinutes ?? 0;
   }
+  if (event.type === "PROGRESS_UPDATED") {
+    summary.progressUpdates += 1;
+    summary.progressChanged += event.deltaProgress ?? 0;
+  }
 }
 
 function gameSummary(game: Game): ActivityGameSummary {
@@ -99,7 +111,9 @@ function gameSummary(game: Game): ActivityGameSummary {
     eventCount: 0,
     statusChanges: 0,
     playtimeUpdates: 0,
+    progressUpdates: 0,
     minutesChanged: 0,
+    progressChanged: 0,
     activeDays: 0,
   };
 }
@@ -185,6 +199,9 @@ export async function activityStatistics(
     playtimeUpdates: activities.filter(
       (event) =>
         event.type === "PLAYTIME_UPDATED" || event.type === "EXTERNAL_ACTIVITY",
+    ).length,
+    progressUpdates: activities.filter(
+      (event) => event.type === "PROGRESS_UPDATED",
     ).length,
     monthly: sortPeriods(monthly),
     daily: sortPeriods(daily),

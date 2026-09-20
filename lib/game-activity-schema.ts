@@ -18,6 +18,7 @@ export const gameActivityEventSchema = z
       "START_DATE_CHANGED",
       "START_DATE_CLEARED",
       "PLAYTIME_UPDATED",
+      "PROGRESS_UPDATED",
       "COMPLETION_DATE_CHANGED",
       "EXTERNAL_ACTIVITY",
     ]),
@@ -29,6 +30,9 @@ export const gameActivityEventSchema = z
     previousMinutes: z.number().int().min(0).max(60_000_000).optional(),
     totalMinutes: z.number().int().min(0).max(60_000_000).optional(),
     deltaMinutes: z.number().int().min(-60_000_000).max(60_000_000).optional(),
+    previousProgress: z.number().min(0).max(100).optional(),
+    progress: z.number().min(0).max(100).optional(),
+    deltaProgress: z.number().min(-100).max(100).optional(),
     inferred: z.boolean().optional(),
     note: z.string().max(2_000).optional(),
   })

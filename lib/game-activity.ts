@@ -156,6 +156,21 @@ export function deriveGameActivity(
     });
   }
 
+  const previousProgress = previous?.manualProgress;
+  const nextProgress = game.manualProgress;
+  if (
+    (previous && previousProgress !== nextProgress) ||
+    (!previous && nextProgress !== undefined)
+  ) {
+    add({
+      type: "PROGRESS_UPDATED",
+      occurredAt: context.now,
+      previousProgress,
+      progress: nextProgress,
+      deltaProgress: (nextProgress ?? 0) - (previousProgress ?? 0),
+    });
+  }
+
   return { game, events };
 }
 

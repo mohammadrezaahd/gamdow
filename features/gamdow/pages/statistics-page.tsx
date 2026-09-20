@@ -1,30 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Alert,
-  Box,
-  CircularProgress,
-  LinearProgress,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Alert, Box, CircularProgress, Paper, Stack, Typography } from "@mui/material";
 import { RefreshRounded } from "@mui/icons-material";
-import { Button, Chip, TextField, ToggleButton, ToggleButtonGroup } from "@/components/ui";
+import { Button, Chip, ToggleButton, ToggleButtonGroup } from "@/components/ui";
 import { EmptyState, Metric, SectionTitle } from "@/components/page-parts";
-import { statuses } from "@/services/library-repository";
 import { statisticsRepository } from "@/services/statistics-repository";
 import type {
   ActivityPeriodSummary,
   ActivityStatistics,
-  GameActivityEvent,
 } from "@/types/game-activity";
 
 const formatMinutes = (minutes: number) => {
@@ -34,96 +18,170 @@ const formatMinutes = (minutes: number) => {
   const value = [hours ? `${hours}h` : "", rest ? `${rest}m` : ""]
     .filter(Boolean)
     .join(" ");
-  return `${minutes < 0 ? "−" : ""}${value || "0m"}`;
+  return `${minutes < 0 ? "−" : minutes > 0 ? "+" : ""}${value || "0m"}`;
 };
 
-const formatDate = (value?: string) =>
-  value
-    ? new Intl.DateTimeFormat(undefined, {
-        dateStyle: "medium",
-        timeStyle: value.includes("T") ? "short" : undefined,
-      }).format(new Date(value))
-    : "—";
+const formatProgress = (value: number) => {
+  const rounded = Math.round(Math.abs(value) * 10) / 10;
+  return `${value < 0 ? "−" : value > 0 ? "+" : ""}${rounded} pts`;
+};
 
-const formatPeriod = (period: string) => {
+const periodLabel = (period: string, short = false) => {
   if (/^\d{4}-\d{2}$/.test(period)) {
     const [year, month] = period.split("-").map(Number);
     return new Intl.DateTimeFormat(undefined, {
-      month: "long",
-      year: "numeric",
+      month: short ? "short" : "long",
+      ...(short ? {} : { year: "numeric" }),
     }).format(new Date(year, month - 1, 1));
   }
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-  }).format(new Date(`${period}T12:00:00`));
+  const date = new Date(`${period}T12:00:00`);
+  return short
+    ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date)
+    : new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
 };
 
-const eventLabel = (event: GameActivityEvent) => {
-  switch (event.type) {
-    case "ADDED":
-      return "Added to library";
-    case "STATUS_CHANGED":
-      return "Status changed";
-    case "STARTED":
-      return "Started playing";
-    case "COMPLETED":
-      return "Completed";
-    case "COMPLETION_CLEARED":
-      return "Completion cleared";
-    case "START_DATE_CHANGED":
-      return "Start date changed";
-    case "START_DATE_CLEARED":
-      return "Start date cleared";
-    case "PLAYTIME_UPDATED":
-      return "Playtime updated";
-    case "COMPLETION_DATE_CHANGED":
-      return "Completion date changed";
-    case "EXTERNAL_ACTIVITY":
-      return "External activity synced";
-    case "BASELINE":
-      return "Tracking baseline";
-  }
-};
+function ActivityChart({
+  rows,
+  mode,
+}: {
+  rows: ActivityPeriodSummary[];
+  mode: "monthly" | "daily";
+}) {
+  const chronological = [...rows].reverse();
+  const maxMinutes = Math.max(1, ...rows.map((row) => row.minutesGained));
+  const maxProgress = Math.max(1, ...rows.map((row) => row.progressGained));
 
-function PeriodTable({ rows }: { rows: ActivityPeriodSummary[] }) {
-  return rows.length ? (
-    <TableContainer sx={{ maxHeight: 560 }}>
-      <Table stickyHeader size="small" aria-label="Activity by period">
-        <TableHead>
-          <TableRow>
-            <TableCell>Period</TableCell>
-            <TableCell align="right">Active games</TableCell>
-            <TableCell align="right">Playtime change</TableCell>
-            <TableCell align="right">Updates</TableCell>
-            <TableCell align="right">Status changes</TableCell>
-            <TableCell align="right">Started</TableCell>
-            <TableCell align="right">Completed</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {rows.map((row) => (
-            <TableRow key={row.period} hover>
-              <TableCell sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
-                {formatPeriod(row.period)}
-              </TableCell>
-              <TableCell align="right">{row.activeGames}</TableCell>
-              <TableCell
-                align="right"
-                sx={{ color: row.minutesChanged > 0 ? "primary.main" : undefined }}
+  if (!rows.length)
+    return (
+      <Box sx={{ py: 6, textAlign: "center" }}>
+        <Typography color="text.secondary">
+          No recorded activity yet. Change a game&apos;s status, playtime or progress to start the chart.
+        </Typography>
+      </Box>
+    );
+
+  return (
+    <>
+      <Box sx={{ overflowX: "auto", pb: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-end",
+            gap: { xs: 1.25, md: 2 },
+            minWidth: Math.max(chronological.length * 52, 420),
+            height: 245,
+            px: 1,
+            pt: 2,
+          }}
+        >
+          {chronological.map((row) => {
+            const minutesHeight = row.minutesGained
+              ? Math.max(8, (row.minutesGained / maxMinutes) * 158)
+              : 3;
+            const progressHeight = row.progressGained
+              ? Math.max(8, (row.progressGained / maxProgress) * 158)
+              : 3;
+            return (
+              <Box
+                key={row.period}
+                title={`${periodLabel(row.period)} · ${formatMinutes(row.minutesGained)} playtime · ${formatProgress(row.progressGained)} progress`}
+                sx={{ width: 38, flex: "0 0 38px", textAlign: "center" }}
               >
-                {formatMinutes(row.minutesChanged)}
-              </TableCell>
-              <TableCell align="right">{row.playtimeUpdates}</TableCell>
-              <TableCell align="right">{row.statusChanges}</TableCell>
-              <TableCell align="right">{row.started}</TableCell>
-              <TableCell align="right">{row.completed}</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{ height: 175, alignItems: "flex-end", justifyContent: "center" }}
+                >
+                  <Box
+                    aria-label={`${periodLabel(row.period)} playtime ${formatMinutes(row.minutesGained)}`}
+                    sx={{
+                      width: 14,
+                      height: minutesHeight,
+                      borderRadius: "4px 4px 1px 1px",
+                      bgcolor: "primary.main",
+                      transition: "height .2s ease",
+                    }}
+                  />
+                  <Box
+                    aria-label={`${periodLabel(row.period)} progress ${formatProgress(row.progressGained)}`}
+                    sx={{
+                      width: 14,
+                      height: progressHeight,
+                      borderRadius: "4px 4px 1px 1px",
+                      bgcolor: "secondary.main",
+                      transition: "height .2s ease",
+                    }}
+                  />
+                </Stack>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", mt: 1, whiteSpace: "nowrap", overflow: "hidden" }}
+                >
+                  {periodLabel(row.period, true)}
+                </Typography>
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+      <Stack direction="row" spacing={2.5} sx={{ mt: 1, flexWrap: "wrap" }}>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+          <Box sx={{ width: 10, height: 10, bgcolor: "primary.main", borderRadius: 1 }} />
+          <Typography variant="caption" color="text.secondary">Playtime</Typography>
+        </Stack>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
+          <Box sx={{ width: 10, height: 10, bgcolor: "secondary.main", borderRadius: 1 }} />
+          <Typography variant="caption" color="text.secondary">Progress points</Typography>
+        </Stack>
+        <Typography variant="caption" color="text.secondary">
+          {mode === "daily" ? "Each bar is one day" : "Each bar is one month"}
+        </Typography>
+      </Stack>
+    </>
+  );
+}
+
+function ActivityDetails({ rows }: { rows: ActivityPeriodSummary[] }) {
+  return rows.length ? (
+    <Stack spacing={0.75} sx={{ maxHeight: 390, overflowY: "auto", pr: 0.5 }}>
+      {rows.map((row) => (
+        <Box
+          key={row.period}
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "minmax(100px,1fr) auto auto auto",
+            gap: { xs: 1, sm: 2.5 },
+            alignItems: "center",
+            p: 1.25,
+            borderBottom: 1,
+            borderColor: "divider",
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            {periodLabel(row.period)}
+          </Typography>
+          <Typography variant="body2" color={row.minutesGained ? "primary.main" : "text.secondary"}>
+            {formatMinutes(row.minutesGained)}
+          </Typography>
+          <Typography variant="body2" color={row.progressGained ? "secondary.main" : "text.secondary"}>
+            {formatProgress(row.progressGained)}
+          </Typography>
+          <Stack sx={{ alignItems: "flex-end" }}>
+            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+              {row.activeGames} {row.activeGames === 1 ? "game" : "games"}
+            </Typography>
+            {row.statusChanges > 0 && (
+              <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+                {row.statusChanges} status {row.statusChanges === 1 ? "change" : "changes"}
+              </Typography>
+            )}
+          </Stack>
+        </Box>
+      ))}
+    </Stack>
   ) : (
-    <Typography color="text.secondary">No activity has been recorded for this period yet.</Typography>
+    <Typography color="text.secondary">No activity in this range yet.</Typography>
   );
 }
 
@@ -132,8 +190,6 @@ export function StatisticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [period, setPeriod] = useState<"monthly" | "daily">("monthly");
-  const [gameFilter, setGameFilter] = useState("");
-  const [activityFilter, setActivityFilter] = useState("");
   const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
@@ -172,38 +228,16 @@ export function StatisticsPage() {
   }, []);
 
   const current = statistics;
-  const filteredGames = useMemo(() => {
-    if (!current) return [];
-    const query = gameFilter.trim().toLocaleLowerCase();
-    return current.games.filter(
-      (game) => !query || game.title.toLocaleLowerCase().includes(query),
-    );
-  }, [current, gameFilter]);
-  const filteredActivities = useMemo(() => {
-    if (!current) return [];
-    const query = activityFilter.trim().toLocaleLowerCase();
-    return current.activities.filter(
-      (event) =>
-        !query ||
-        event.gameTitle.toLocaleLowerCase().includes(query) ||
-        eventLabel(event).toLocaleLowerCase().includes(query) ||
-        event.source.toLocaleLowerCase().includes(query),
-    );
-  }, [current, activityFilter]);
-  const statusCounts = useMemo(
-    () =>
-      statuses.map((status) => ({
-        status,
-        count: current?.games.filter((game) => game.status === status).length ?? 0,
-      })),
-    [current],
+  const rows = useMemo(
+    () => (current ? (period === "monthly" ? current.monthly : current.daily) : []),
+    [current, period],
   );
 
   return (
     <>
       <SectionTitle
         title="Statistics"
-        eyebrow="THE STORIES ADD UP"
+        eyebrow="PLAY · TRACK · REMEMBER"
         action={
           <Button
             variant="outlined"
@@ -211,15 +245,11 @@ export function StatisticsPage() {
             disabled={loading}
             onClick={() => setRefresh((value) => value + 1)}
           >
-            Refresh activity
+            Refresh
           </Button>
         }
       />
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       {loading && !current ? (
         <Paper sx={{ p: 5, display: "grid", placeItems: "center" }}>
           <CircularProgress aria-label="Loading statistics" />
@@ -230,7 +260,7 @@ export function StatisticsPage() {
       ) : !current || !current.totalGames ? (
         <EmptyState
           title="Your story is just beginning"
-          description="Add games and your status and playtime changes will be collected here."
+          description="Add games and record progress or playtime to see the activity chart."
         />
       ) : (
         <Stack spacing={3}>
@@ -244,68 +274,10 @@ export function StatisticsPage() {
               gap: 2,
             }}
           >
-            <Metric value={formatMinutes(current.totalMinutes)} label="Total recorded playtime" />
-            <Metric value={current.trackedGames} label={`Games with playtime · ${current.totalGames} total`} />
-            <Metric value={current.activeDays} label="Active days in recorded history" />
-            <Metric value={current.totalEvents} label={`${current.playtimeUpdates} playtime · ${current.statusChanges} status updates`} />
-          </Box>
-
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { lg: "minmax(0,1fr) minmax(0,1fr)" },
-              gap: 3,
-            }}
-          >
-            <Paper sx={{ p: { xs: 2, md: 3 } }}>
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                sx={{ justifyContent: "space-between", gap: 2, mb: 3 }}
-              >
-                <Box>
-                  <Typography variant="h5">Activity calendar</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    A monthly and daily view of every recorded change.
-                  </Typography>
-                </Box>
-                <ToggleButtonGroup
-                  exclusive
-                  size="small"
-                  value={period}
-                  onChange={(_, value) => value && setPeriod(value)}
-                  aria-label="Activity period"
-                >
-                  <ToggleButton value="monthly">Monthly</ToggleButton>
-                  <ToggleButton value="daily">Daily</ToggleButton>
-                </ToggleButtonGroup>
-              </Stack>
-              <PeriodTable rows={period === "monthly" ? current.monthly : current.daily} />
-            </Paper>
-
-            <Paper sx={{ p: { xs: 2, md: 3 } }}>
-              <Typography variant="h5">Current status mix</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Based on the latest state of every game in your archive.
-              </Typography>
-              <Stack spacing={2.5} sx={{ mt: 3 }}>
-                {statusCounts.map(({ status, count }) => (
-                  <Box key={status}>
-                    <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-                      <Typography variant="body2">{status}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {count} / {current.totalGames}
-                      </Typography>
-                    </Stack>
-                    <LinearProgress
-                      aria-label={`${status}: ${count} games`}
-                      variant="determinate"
-                      value={(count / current.totalGames) * 100}
-                      sx={{ mt: 1, height: 7, borderRadius: 5 }}
-                    />
-                  </Box>
-                ))}
-              </Stack>
-            </Paper>
+            <Metric value={formatMinutes(current.totalMinutes)} label="Total playtime" />
+            <Metric value={current.activeDays} label={`Active days · ${current.totalGames} games`} />
+            <Metric value={current.statusChanges} label="Status changes" />
+            <Metric value={current.progressUpdates} label="Progress updates" />
           </Box>
 
           <Paper sx={{ p: { xs: 2, md: 3 } }}>
@@ -314,119 +286,36 @@ export function StatisticsPage() {
               sx={{ justifyContent: "space-between", gap: 2, mb: 2 }}
             >
               <Box>
-                <Typography variant="h5">Games · complete activity totals</Typography>
+                <Typography variant="h5">Activity rhythm</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  One row per game, including games with no recorded event yet.
+                  How much you played and how many progress points you recorded.
                 </Typography>
               </Box>
-              <TextField
+              <ToggleButtonGroup
+                exclusive
                 size="small"
-                label="Find a game"
-                value={gameFilter}
-                onChange={(event) => setGameFilter(event.target.value)}
-                sx={{ width: { xs: "100%", sm: 240 } }}
-              />
+                value={period}
+                onChange={(_, value) => value && setPeriod(value)}
+                aria-label="Activity period"
+              >
+                <ToggleButton value="monthly">Monthly</ToggleButton>
+                <ToggleButton value="daily">Daily</ToggleButton>
+              </ToggleButtonGroup>
             </Stack>
-            <TableContainer sx={{ maxHeight: 620 }}>
-              <Table stickyHeader size="small" aria-label="Game activity totals">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Game</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell align="right">Playtime</TableCell>
-                    <TableCell align="right">Recorded events</TableCell>
-                    <TableCell align="right">Status changes</TableCell>
-                    <TableCell align="right">Active days</TableCell>
-                    <TableCell>Last activity</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredGames.map((game) => (
-                    <TableRow key={game.gameId} hover>
-                      <TableCell sx={{ minWidth: 180, fontWeight: 700 }}>
-                        <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                          <span>{game.title}</span>
-                          <Chip size="small" label={game.source} />
-                        </Stack>
-                      </TableCell>
-                      <TableCell><Chip size="small" label={game.status} /></TableCell>
-                      <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>{formatMinutes(game.totalMinutes)}</TableCell>
-                      <TableCell align="right">{game.eventCount}</TableCell>
-                      <TableCell align="right">{game.statusChanges}</TableCell>
-                      <TableCell align="right">{game.activeDays}</TableCell>
-                      <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(game.lastActivityAt)}</TableCell>
-                    </TableRow>
-                  ))}
-                  {!filteredGames.length && (
-                    <TableRow><TableCell colSpan={7}>No games match this search.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <ActivityChart rows={rows} mode={period} />
           </Paper>
 
           <Paper sx={{ p: { xs: 2, md: 3 } }}>
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              sx={{ justifyContent: "space-between", gap: 2, mb: 2 }}
-            >
+            <Stack direction="row" sx={{ justifyContent: "space-between", mb: 2, gap: 2 }}>
               <Box>
-                <Typography variant="h5">Complete activity log</Typography>
+                <Typography variant="h5">{period === "monthly" ? "Monthly details" : "Daily details"}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Every status, playtime and library activity record in chronological order.
+                  Playtime, progress points and the number of games touched in each period.
                 </Typography>
               </Box>
-              <TextField
-                size="small"
-                label="Filter activity"
-                value={activityFilter}
-                onChange={(event) => setActivityFilter(event.target.value)}
-                sx={{ width: { xs: "100%", sm: 240 } }}
-              />
+              <Chip size="small" label={`${rows.length} ${period === "monthly" ? "months" : "days"}`} />
             </Stack>
-            {filteredActivities.length ? (
-              <TableContainer sx={{ maxHeight: 700 }}>
-                <Table stickyHeader size="small" aria-label="Complete activity log">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Game</TableCell>
-                      <TableCell>Activity</TableCell>
-                      <TableCell>Change</TableCell>
-                      <TableCell>Source</TableCell>
-                      <TableCell>Recorded</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {filteredActivities.map((event) => (
-                      <TableRow key={event.id} hover>
-                        <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(event.occurredAt)}</TableCell>
-                        <TableCell sx={{ minWidth: 170, fontWeight: 700 }}>{event.gameTitle}</TableCell>
-                        <TableCell>
-                          <Typography variant="body2">{eventLabel(event)}</Typography>
-                          {event.fromStatus && event.toStatus && (
-                            <Typography variant="caption" color="text.secondary">
-                              {event.fromStatus} → {event.toStatus}
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell sx={{ whiteSpace: "nowrap" }}>
-                          {event.deltaMinutes !== undefined
-                            ? `${formatMinutes(event.deltaMinutes)} · ${formatMinutes(event.totalMinutes ?? 0)} total`
-                            : event.toStatus || event.note || "—"}
-                        </TableCell>
-                        <TableCell><Chip size="small" label={event.source} /></TableCell>
-                        <TableCell sx={{ whiteSpace: "nowrap" }}>{formatDate(event.recordedAt)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography color="text.secondary">
-                No matching activity. Change a status or playtime to start the log.
-              </Typography>
-            )}
+            <ActivityDetails rows={rows} />
           </Paper>
         </Stack>
       )}

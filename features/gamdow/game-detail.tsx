@@ -1,5 +1,7 @@
 "use client";
 import { PlaytimeControl } from "./components/playtime-control";
+import { ProgressControl } from "./components/progress-control";
+import { GameProgressHistory } from "./components/game-progress-history";
 import { SteamGamePanel } from "./steam/steam-game-panel";
 import type { SteamMetadata } from "@/types/steam";
 import { DateField } from "@/components/ui";
@@ -202,11 +204,6 @@ export function GameDetail({
         </Tabs>
         {tab === 0 && (
           <Stack spacing={3}>
-            {game.manualProgress !== undefined && (
-              <Typography color="primary.main">
-                Manual game progress · {game.manualProgress}%
-              </Typography>
-            )}
             <Typography color="text.secondary">
               {visibleMetadata?.description ||
                 game.description ||
@@ -234,7 +231,10 @@ export function GameDetail({
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { sm: "repeat(3,minmax(0,1fr))" },
+                gridTemplateColumns: {
+                  sm: "repeat(2,minmax(0,1fr))",
+                  lg: "repeat(4,minmax(0,1fr))",
+                },
                 gap: 2,
               }}
             >
@@ -263,7 +263,9 @@ export function GameDetail({
                 </Typography>
               </Paper>
               <PlaytimeControl game={game} />
+              <ProgressControl game={game} />
             </Box>
+            <GameProgressHistory game={game} />
             <Typography color="text.secondary">
               Started: {game.startedAt || "Not recorded"} · Finished:{" "}
               {game.completedAt || "Not recorded"}
