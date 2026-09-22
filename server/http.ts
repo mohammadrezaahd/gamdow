@@ -31,6 +31,7 @@ export function failure(error: unknown) {
   console.error(
     "Server operation failed",
     error instanceof Error ? error.name : "Unknown error",
+    error,
   );
   return json(
     {

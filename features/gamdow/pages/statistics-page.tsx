@@ -270,12 +270,18 @@ export function StatisticsPage() {
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
       {current && (
         <Paper sx={{ p: { xs: 2, md: 2.5 }, mb: 3 }}>
-          <Stack
-            direction={{ xs: "column", lg: "row" }}
-            spacing={1.5}
-            sx={{ alignItems: { lg: "center" } }}
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: {
+                xs: "1fr",
+                lg: "minmax(260px,1.25fr) repeat(5,minmax(130px,.7fr)) auto",
+              },
+              alignItems: { lg: "center" },
+              gap: 1.25,
+            }}
           >
-            <Box sx={{ mr: { lg: "auto" } }}>
+            <Box sx={{ pr: { lg: 1.25 } }}>
               <Typography variant="h6">Filter the archive</Typography>
               <Typography variant="caption" color="text.secondary">
                 See your rhythm by genre, platform, status or source.
@@ -287,7 +293,7 @@ export function StatisticsPage() {
               label="Genre"
               value={filters.genre ?? ""}
               onChange={(event) => setFilter("genre", event.target.value || undefined)}
-              sx={{ minWidth: { lg: 150 } }}
+              sx={{ width: "100%" }}
             >
               <MenuItem value="">All genres</MenuItem>
               {current.availableFilters.genres.map((genre) => (
@@ -300,7 +306,7 @@ export function StatisticsPage() {
               label="Platform"
               value={filters.platform ?? ""}
               onChange={(event) => setFilter("platform", event.target.value || undefined)}
-              sx={{ minWidth: { lg: 140 } }}
+              sx={{ width: "100%" }}
             >
               <MenuItem value="">All platforms</MenuItem>
               {current.availableFilters.platforms.map((platform) => (
@@ -318,7 +324,7 @@ export function StatisticsPage() {
                   (event.target.value || undefined) as ActivityStatisticsQuery["status"],
                 )
               }
-              sx={{ minWidth: { lg: 140 } }}
+              sx={{ width: "100%" }}
             >
               <MenuItem value="">All statuses</MenuItem>
               {current.availableFilters.statuses.map((status) => (
@@ -336,7 +342,7 @@ export function StatisticsPage() {
                   (event.target.value || undefined) as ActivityStatisticsQuery["source"],
                 )
               }
-              sx={{ minWidth: { lg: 125 } }}
+              sx={{ width: "100%" }}
             >
               <MenuItem value="">All sources</MenuItem>
               {current.availableFilters.sources.map((source) => (
@@ -354,16 +360,18 @@ export function StatisticsPage() {
                   event.target.value === "" ? undefined : event.target.value === "true",
                 )
               }
-              sx={{ minWidth: { lg: 125 } }}
+              sx={{ width: "100%" }}
             >
               <MenuItem value="">All games</MenuItem>
               <MenuItem value="true">Favorites</MenuItem>
               <MenuItem value="false">Not favorites</MenuItem>
             </TextField>
             {filtersActive && (
-              <Button onClick={() => setFilters({})}>Clear</Button>
+              <Button onClick={() => setFilters({})} sx={{ justifySelf: { lg: "end" } }}>
+                Clear
+              </Button>
             )}
-          </Stack>
+          </Box>
         </Paper>
       )}
       {loading && !current ? (

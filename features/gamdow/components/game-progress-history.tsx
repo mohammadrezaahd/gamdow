@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AccessTimeRounded,
-  ArrowUpwardRounded,
-  CheckCircleOutlineRounded,
+  CheckCircleRounded,
+  FlagRounded,
+  PauseCircleRounded,
+  PlayArrowRounded,
+  TrendingUpRounded,
   SwapHorizRounded,
 } from "@mui/icons-material";
 import { Box, CircularProgress, Paper, Stack, Typography } from "@mui/material";
@@ -19,14 +22,6 @@ const statusColors: Record<GameStatus, string> = {
   "On hold": "#e5a67b",
   Completed: "#8bd8b0",
   Dropped: "#f28f8f",
-};
-
-const statusShort: Record<GameStatus, string> = {
-  "Not started": "Not started",
-  Playing: "Playing",
-  "On hold": "On hold",
-  Completed: "Completed",
-  Dropped: "Dropped",
 };
 
 const duration = (minutes: number) => {
@@ -49,12 +44,13 @@ const dateLabel = (date: string, options: Intl.DateTimeFormatOptions = {}) =>
 
 interface DayActivity {
   date: string;
+  minutesPlayed: number;
   playtimeChanged: number;
   playtimeTotal?: number;
   progressChanged: number;
   progress?: number;
   hasProgress: boolean;
-  statuses: string[];
+  statusTransitions: string[];
   sources: Set<string>;
 }
 
@@ -65,165 +61,176 @@ function groupByDay(events: GameActivityEvent[]) {
     const day =
       days.get(date) ?? {
         date,
+        minutesPlayed: 0,
         playtimeChanged: 0,
         progressChanged: 0,
         hasProgress: false,
-        statuses: [],
+        statusTransitions: [],
         sources: new Set<string>(),
       };
     days.set(date, day);
     day.sources.add(event.source);
 
     if (event.type === "STATUS_CHANGED" && event.fromStatus && event.toStatus)
-      day.statuses.push(`${event.fromStatus} → ${event.toStatus}`);
-    else if (event.type === "STARTED") day.statuses.push("Started playing");
-    else if (event.type === "COMPLETED") day.statuses.push("Completed");
+      day.statusTransitions.push(`${event.fromStatus} → ${event.toStatus}`);
+    else if (event.type === "STARTED")
+      day.statusTransitions.push("Not started → Playing");
+    else if (event.type === "COMPLETED")
+      day.statusTransitions.push("Playing → Completed");
     else if (event.type === "COMPLETION_CLEARED")
-      day.statuses.push("Completion reopened");
+      day.statusTransitions.push("Completed → Playing");
 
     if (event.type === "PLAYTIME_UPDATED" || event.type === "EXTERNAL_ACTIVITY") {
-      day.playtimeChanged += event.deltaMinutes ?? 0;
+      const delta = event.deltaMinutes ?? 0;
+      day.playtimeChanged += delta;
+      day.minutesPlayed += Math.max(0, delta);
       day.playtimeTotal ??= event.totalMinutes;
     }
     if (event.type === "PROGRESS_UPDATED") {
       day.progressChanged += event.deltaProgress ?? 0;
-      if (!day.hasProgress) {
-        day.progress = event.progress;
-        day.hasProgress = true;
-      }
+      day.progress = event.progress;
+      day.hasProgress = true;
     }
   }
   return [...days.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
 
-interface JourneyPoint {
-  date: string;
-  timestamp: number;
-  progress?: number;
-  hasProgress: boolean;
-  totalMinutes?: number;
-  status: GameStatus;
-  statusChange?: string;
+interface StatusMilestone {
+  key: "started" | "hold" | "dropped" | "completed";
+  label: string;
+  icon: typeof PlayArrowRounded;
+  color: string;
+  firstAt?: string;
+  lastAt?: string;
+  count: number;
 }
 
-function buildJourney(events: GameActivityEvent[], game: Game) {
-  const ordered = [...events].sort(
+function extractMilestones(events: GameActivityEvent[], game: Game): StatusMilestone[] {
+  const tracked: Record<StatusMilestone["key"], StatusMilestone> = {
+    started: {
+      key: "started",
+      label: "Started",
+      icon: PlayArrowRounded,
+      color: statusColors.Playing,
+      count: 0,
+    },
+    hold: {
+      key: "hold",
+      label: "On hold",
+      icon: PauseCircleRounded,
+      color: statusColors["On hold"],
+      count: 0,
+    },
+    dropped: {
+      key: "dropped",
+      label: "Dropped",
+      icon: FlagRounded,
+      color: statusColors.Dropped,
+      count: 0,
+    },
+    completed: {
+      key: "completed",
+      label: "Completed",
+      icon: CheckCircleRounded,
+      color: statusColors.Completed,
+      count: 0,
+    },
+  };
+
+  const mark = (key: StatusMilestone["key"], at: string) => {
+    const bucket = tracked[key];
+    const date = at.slice(0, 10);
+    bucket.count += 1;
+    bucket.firstAt ??= date;
+    bucket.lastAt = date;
+  };
+
+  for (const event of [...events].sort(
     (a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt),
-  );
-  const points = new Map<string, JourneyPoint>();
-  const firstStatusChange = ordered.find(
-    (event) => event.type === "STATUS_CHANGED" && event.fromStatus,
-  );
-  const firstAdded = ordered.find(
-    (event) => event.type === "ADDED" && event.toStatus,
-  );
-  let status: GameStatus =
-    firstStatusChange?.fromStatus ?? firstAdded?.toStatus ?? game.status;
-  let progress: number | undefined;
-  let hasProgress = false;
-  let totalMinutes: number | undefined;
-
-  for (const event of ordered) {
-    if (event.type === "ADDED" && event.toStatus) status = event.toStatus;
-    if (event.type === "STATUS_CHANGED" && event.toStatus) status = event.toStatus;
-    if (event.type === "STARTED") status = "Playing";
-    if (event.type === "COMPLETED") status = "Completed";
-    if (event.type === "COMPLETION_CLEARED") status = "Playing";
-    if (event.type === "PROGRESS_UPDATED") {
-      progress = event.progress;
-      hasProgress = true;
+  )) {
+    if (event.type === "STARTED") mark("started", event.occurredAt);
+    if (event.type === "COMPLETED") mark("completed", event.occurredAt);
+    if (event.type === "STATUS_CHANGED" && event.toStatus) {
+      if (event.toStatus === "Playing") mark("started", event.occurredAt);
+      if (event.toStatus === "On hold") mark("hold", event.occurredAt);
+      if (event.toStatus === "Dropped") mark("dropped", event.occurredAt);
+      if (event.toStatus === "Completed") mark("completed", event.occurredAt);
     }
-    if (event.type === "PLAYTIME_UPDATED" || event.type === "EXTERNAL_ACTIVITY")
-      totalMinutes = event.totalMinutes;
-
-    const date = event.occurredAt.slice(0, 10);
-    const point =
-      points.get(date) ??
-      {
-        date,
-        timestamp: Date.parse(event.occurredAt),
-        progress,
-        hasProgress,
-        totalMinutes,
-        status,
-      };
-    point.progress = progress;
-    point.hasProgress = hasProgress;
-    point.totalMinutes = totalMinutes;
-    point.status = status;
-    if (event.type === "STATUS_CHANGED" && event.fromStatus && event.toStatus)
-      point.statusChange = `${event.fromStatus} → ${event.toStatus}`;
-    else if (event.type === "STARTED") point.statusChange = "Started playing";
-    else if (event.type === "COMPLETED") point.statusChange = "Completed";
-    points.set(date, point);
   }
 
-  return [...points.values()].sort((a, b) => a.timestamp - b.timestamp);
+  if (game.startedAt && !tracked.started.firstAt) {
+    tracked.started.firstAt = game.startedAt;
+    tracked.started.lastAt = game.startedAt;
+  }
+  if (game.status === "On hold" && !tracked.hold.lastAt)
+    tracked.hold.lastAt = events[0]?.occurredAt.slice(0, 10);
+  if (game.status === "Dropped" && !tracked.dropped.lastAt)
+    tracked.dropped.lastAt = events[0]?.occurredAt.slice(0, 10);
+  if (game.completedAt && !tracked.completed.lastAt) {
+    tracked.completed.firstAt = game.completedAt;
+    tracked.completed.lastAt = game.completedAt;
+  }
+
+  return [tracked.started, tracked.hold, tracked.dropped, tracked.completed];
 }
 
-function JourneyChart({ events, game }: { events: GameActivityEvent[]; game: Game }) {
-  const points = buildJourney(events, game);
-  const linePoints = points.filter(
-    (point) => point.hasProgress && point.progress !== undefined,
+function MiniProgressChart({ days, game }: { days: DayActivity[]; game: Game }) {
+  const chronological = [...days].reverse();
+  const progressPoints = chronological.filter(
+    (day) => day.hasProgress && day.progress !== undefined,
   );
-  const usedStatuses = [...new Set(points.map((point) => point.status))];
-  const width = 700;
-  const height = 220;
-  const left = 42;
-  const right = 18;
-  const top = 24;
-  const plotHeight = 118;
+  const width = 640;
+  const height = 132;
+  const left = 18;
+  const right = 10;
+  const top = 12;
+  const bottom = 22;
   const plotWidth = width - left - right;
-  const firstTime = points[0]?.timestamp ?? 0;
-  const lastTime = points[points.length - 1]?.timestamp ?? 0;
-  const span = Math.max(1, lastTime - firstTime);
-  const x = (point: JourneyPoint) =>
-    points.length <= 1
-      ? left + plotWidth / 2
-      : left + ((point.timestamp - firstTime) / span) * plotWidth;
-  const y = (progress: number) =>
-    top + plotHeight - (Math.max(0, Math.min(100, progress)) / 100) * plotHeight;
-  const labels = points.filter((_, index) => {
-    if (points.length <= 5) return true;
-    const step = Math.ceil(points.length / 4);
-    return index % step === 0 || index === points.length - 1;
-  });
-  const pointLabels = linePoints.filter((_, index) => {
-    if (linePoints.length <= 7) return true;
-    const step = Math.ceil(linePoints.length / 6);
-    return index % step === 0 || index === linePoints.length - 1;
-  });
+  const progressFloor = top;
+  const progressCeiling = height - bottom - 30;
+  const barsFloor = height - bottom;
+  const barMaxHeight = 24;
+  const maxPlayed = Math.max(1, ...chronological.map((day) => day.minutesPlayed));
+  const progressX = (index: number, total: number) =>
+    total <= 1 ? left + plotWidth / 2 : left + (index / (total - 1)) * plotWidth;
+  const progressY = (progress: number) => {
+    const clamped = Math.max(0, Math.min(100, progress));
+    return progressFloor + ((100 - clamped) / 100) * (progressCeiling - progressFloor);
+  };
+  const path = progressPoints
+    .map((point, indexOnLine) => {
+      const index = chronological.findIndex((day) => day.date === point.date);
+      const command = indexOnLine === 0 ? "M" : "L";
+      return `${command}${progressX(index, chronological.length)} ${progressY(point.progress ?? 0)}`;
+    })
+    .join(" ");
 
-  if (!points.length) return null;
+  if (!chronological.length) return null;
 
   return (
     <Paper
-      sx={{
-        p: { xs: 2, md: 2.5 },
-        background: "linear-gradient(145deg, #1d261b, #131813)",
-        borderColor: "#d3fc7226",
-      }}
+      variant="outlined"
+      sx={{ p: { xs: 1.5, md: 2 } }}
     >
       <Stack
         direction={{ xs: "column", sm: "row" }}
-        sx={{ justifyContent: "space-between", gap: 1.5, alignItems: { sm: "center" } }}
+        sx={{ justifyContent: "space-between", gap: 1.5, alignItems: { sm: "center" }, mb: 1.25 }}
       >
         <Box>
-          <Typography variant="overline" color="primary.main" sx={{ letterSpacing: ".15em" }}>
-            PROGRESS JOURNEY
+          <Typography variant="subtitle2" color="text.secondary">
+            Progress trend
           </Typography>
-          <Typography variant="h5" sx={{ mt: 0.25 }}>
-            Progress timeline
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Each dot is a recorded progress update. Line color follows status.
+          <Typography variant="body2" color="text.secondary">
+            Daily playtime bars + progress line
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-          <Box sx={{ textAlign: "right" }}>
-            <Typography variant="overline" color="text.secondary">CURRENT</Typography>
-            <Typography variant="h5" color="primary.main">
-              {game.manualProgress === undefined ? "—" : `${game.manualProgress}%`}
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              Current progress
+            </Typography>
+            <Typography sx={{ fontWeight: 700 }}>
+              {game.manualProgress === undefined ? "No value" : `${game.manualProgress}%`}
             </Typography>
           </Box>
           <Chip
@@ -240,121 +247,149 @@ function JourneyChart({ events, game }: { events: GameActivityEvent[]; game: Gam
 
       <Box
         sx={{
-          mt: 2,
-          px: { xs: 0.5, md: 1 },
-          pt: 1,
-          borderRadius: 2,
-          background: "#0c110d",
-          border: 1,
-          borderColor: "#d3fc7217",
           overflowX: "auto",
         }}
       >
-        <Box sx={{ minWidth: { xs: 470, md: "100%" } }}>
+        <Box sx={{ minWidth: { xs: 430, md: "100%" } }}>
           <svg
             viewBox={`0 0 ${width} ${height}`}
             width="100%"
             role="img"
-            aria-label="Game progress timeline"
+            aria-label="Game progress trend"
           >
             {[0, 50, 100].map((value) => (
               <g key={value}>
                 <line
                   x1={left}
                   x2={width - right}
-                  y1={y(value)}
-                  y2={y(value)}
-                  stroke="rgba(227,239,211,.16)"
+                  y1={progressY(value)}
+                  y2={progressY(value)}
+                  stroke="rgba(227,239,211,.14)"
                   strokeDasharray={value === 0 ? undefined : "3 6"}
                 />
-                <text x={left - 9} y={y(value) + 4} textAnchor="end" fill="#879384" fontSize="10">
+                <text
+                  x={left - 4}
+                  y={progressY(value) + 4}
+                  textAnchor="end"
+                  fill="#879384"
+                  fontSize="9"
+                >
                   {value}%
                 </text>
               </g>
             ))}
-            {points
-              .filter((point) => point.statusChange)
-              .map((point) => (
-                <line
-                  key={`status-${point.date}`}
-                  x1={x(point)}
-                  x2={x(point)}
-                  y1={top}
-                  y2={top + plotHeight + 12}
-                  stroke={statusColors[point.status]}
-                  strokeDasharray="2 5"
-                  opacity=".45"
-                />
-              ))}
-            {linePoints.slice(0, -1).map((point, index) => {
-              const next = linePoints[index + 1];
+            {chronological.map((day, index) => {
+              const x = progressX(index, chronological.length);
+              const barHeight = Math.max(
+                day.minutesPlayed ? 4 : 2,
+                (day.minutesPlayed / maxPlayed) * barMaxHeight,
+              );
+              return (
+                <rect
+                  key={`bar-${day.date}`}
+                  x={x - 2}
+                  y={barsFloor - barHeight}
+                  width="4"
+                  height={barHeight}
+                  rx="2"
+                  fill="#d3fc7290"
+                >
+                  <title>{`${dateLabel(day.date)} · ${duration(day.minutesPlayed)}`}</title>
+                </rect>
+              );
+            })}
+            {path && (
+              <path
+                d={path}
+                fill="none"
+                stroke="rgba(125,255,191,.95)"
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            )}
+            {progressPoints.map((point) => {
+              const index = chronological.findIndex((day) => day.date === point.date);
+              return (
+                <circle
+                  key={`point-${point.date}`}
+                  cx={progressX(index, chronological.length)}
+                  cy={progressY(point.progress ?? 0)}
+                  r="2.8"
+                  fill="#7dffbf"
+                >
+                  <title>{`${dateLabel(point.date)} · ${point.progress}%`}</title>
+                </circle>
+              );
+            })}
+            {chronological.filter((day) => day.statusTransitions.length).map((day) => {
+              const index = chronological.findIndex((item) => item.date === day.date);
               return (
                 <line
-                  key={`${point.date}-${next.date}`}
-                  x1={x(point)}
-                  y1={y(point.progress ?? 0)}
-                  x2={x(next)}
-                  y2={y(next.progress ?? 0)}
-                  stroke={statusColors[next.status]}
-                  strokeWidth="4"
-                  strokeLinecap="round"
+                  key={`status-${day.date}`}
+                  x1={progressX(index, chronological.length)}
+                  x2={progressX(index, chronological.length)}
+                  y1={height - bottom + 2}
+                  y2={height - 2}
+                  stroke="#e5a67b"
+                  strokeWidth="1.2"
                 />
               );
             })}
-            {linePoints.map((point) => (
-              <circle
-                key={`point-${point.date}`}
-                cx={x(point)}
-                cy={y(point.progress ?? 0)}
-                r="5"
-                fill="#0c110d"
-                stroke={statusColors[point.status]}
-                strokeWidth="3"
-              >
-                <title>{`${dateLabel(point.date)} · ${point.progress}% · ${statusShort[point.status]}`}</title>
-              </circle>
-            ))}
-            {pointLabels.map((point) => (
+            {[0, Math.floor((chronological.length - 1) / 2), chronological.length - 1]
+              .filter((value, index, all) => value >= 0 && all.indexOf(value) === index)
+              .map((index) => {
+                const day = chronological[index];
+                return (
+                  <text
+                    key={`date-${day.date}`}
+                    x={progressX(index, chronological.length)}
+                    y={height - 6}
+                    textAnchor="middle"
+                    fill="#a3ab9a"
+                    fontSize="9"
+                  >
+                    {dateLabel(day.date, { year: "2-digit" })}
+                  </text>
+                );
+              })}
+            {progressPoints.length <= 6 &&
+              progressPoints.map((point) => {
+                const index = chronological.findIndex((day) => day.date === point.date);
+                return (
+                  <text
+                    key={`value-${point.date}`}
+                    x={progressX(index, chronological.length)}
+                    y={progressY(point.progress ?? 0) - 5}
+                    textAnchor="middle"
+                    fill="#7dffbf"
+                    fontSize="9"
+                  >
+                    {point.progress}%
+                  </text>
+                );
+              })}
+            {chronological.map((day, index) => (
               <text
-                key={`value-${point.date}`}
-                x={x(point)}
-                y={Math.max(13, y(point.progress ?? 0) - 10)}
-                textAnchor="middle"
-                fill={statusColors[point.status]}
-                fontSize="10"
-                fontWeight="700"
-              >
-                {point.progress}%
-              </text>
-            ))}
-            {labels.map((point) => (
-              <text
-                key={`date-${point.date}`}
-                x={x(point)}
-                y={height - 12}
+                key={`status-dot-${day.date}`}
+                x={progressX(index, chronological.length)}
+                y={height - bottom - 2}
                 textAnchor="middle"
                 fill="#a3ab9a"
-                fontSize="10"
+                fontSize="8"
               >
-                {dateLabel(point.date, { year: "2-digit" })}
+                {day.statusTransitions.length ? "|" : ""}
               </text>
             ))}
           </svg>
         </Box>
       </Box>
 
-      <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1, mt: 1.5 }}>
-        {usedStatuses.map((status) => (
-          <Stack key={status} direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
-            <Box sx={{ width: 8, height: 8, borderRadius: "50%", bgcolor: statusColors[status] }} />
-            <Typography variant="caption" color="text.secondary">{status}</Typography>
-          </Stack>
-        ))}
-        {!linePoints.length && (
-          <Typography variant="caption" color="text.secondary">
-            Move the progress slider to create the first point.
-          </Typography>
-        )}
+      <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1, mt: 1 }}>
+        <Chip size="small" label="Bars: played time per day" />
+        <Chip size="small" label="Line: manual progress" />
+        <Chip size="small" label="Orange markers: status changes" />
+        {!progressPoints.length && <Chip size="small" label="No progress points yet" />}
       </Stack>
     </Paper>
   );
@@ -366,6 +401,13 @@ function DayActivityList({ days, compact, onOpenJournal }: {
   onOpenJournal?: () => void;
 }) {
   const visibleDays = compact ? days.slice(0, 3) : days;
+  const totalMinutesPlayed = days.reduce((sum, day) => sum + day.minutesPlayed, 0);
+  const averageMinutes = days.length ? Math.round(totalMinutesPlayed / days.length) : 0;
+  const bestDay = days.reduce<DayActivity | undefined>(
+    (best, day) => (!best || day.minutesPlayed > best.minutesPlayed ? day : best),
+    undefined,
+  );
+
   return (
     <Paper sx={{ p: { xs: 2, md: 3 } }}>
       <Stack
@@ -376,14 +418,23 @@ function DayActivityList({ days, compact, onOpenJournal }: {
           <Typography variant="overline" color="primary.main" sx={{ letterSpacing: ".15em" }}>
             {compact ? "RECENT LOG" : "DAILY JOURNAL"}
           </Typography>
-          <Typography variant="h5">{compact ? "Recent activity" : "Every recorded session"}</Typography>
+          <Typography variant="h5">{compact ? "Recent activity" : "Daily progress table"}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.4 }}>
             {compact
               ? "A quick view of your latest play and progress."
-              : "Playtime, progress and status changes in one readable timeline."}
+              : "Includes played hours, progress deltas and status transitions for each day."}
           </Typography>
         </Box>
-        <Chip size="small" label={`${days.length} active days`} />
+        <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
+          <Chip size="small" label={`${days.length} active days`} />
+          <Chip size="small" label={`Avg ${duration(averageMinutes).replace("+", "")}/day`} />
+          {bestDay && bestDay.minutesPlayed > 0 && (
+            <Chip
+              size="small"
+              label={`Best ${dateLabel(bestDay.date, { year: "2-digit" })} · ${duration(bestDay.minutesPlayed).replace("+", "")}`}
+            />
+          )}
+        </Stack>
       </Stack>
       {!days.length ? (
         <Typography color="text.secondary">
@@ -391,20 +442,36 @@ function DayActivityList({ days, compact, onOpenJournal }: {
         </Typography>
       ) : (
         <Stack spacing={1}>
+          {!compact && (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "minmax(110px,.8fr) minmax(110px,.8fr) minmax(140px,1fr) minmax(180px,1.3fr)",
+                gap: 1.25,
+                px: 1,
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">Date</Typography>
+              <Typography variant="caption" color="text.secondary">Played</Typography>
+              <Typography variant="caption" color="text.secondary">Progress</Typography>
+              <Typography variant="caption" color="text.secondary">Status</Typography>
+            </Box>
+          )}
           {visibleDays.map((day) => (
             <Box
               key={day.date}
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "minmax(125px,.7fr) 1fr 1fr 1fr" },
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "minmax(110px,.8fr) minmax(110px,.8fr) minmax(140px,1fr) minmax(180px,1.3fr)",
+                },
                 gap: { xs: 1.5, sm: 2 },
                 alignItems: "center",
-                p: { xs: 1.5, md: 1.75 },
+                p: { xs: 1.25, md: 1.5 },
                 border: 1,
                 borderColor: "divider",
                 borderRadius: 2,
-                transition: "border-color .2s, background .2s",
-                "&:hover": { borderColor: "#d3fc7240", background: "#d3fc7207" },
               }}
             >
               <Box>
@@ -418,10 +485,16 @@ function DayActivityList({ days, compact, onOpenJournal }: {
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <AccessTimeRounded sx={{ fontSize: 18, color: "primary.main" }} />
                 <Box>
-                  <Typography variant="overline" color="text.secondary">PLAYTIME</Typography>
-                  <Typography color={day.playtimeChanged > 0 ? "primary.main" : undefined}>
-                    {day.playtimeChanged ? duration(day.playtimeChanged) : "No time change"}
+                  <Typography color={day.minutesPlayed > 0 ? "primary.main" : "text.secondary"}>
+                    {day.minutesPlayed > 0
+                      ? duration(day.minutesPlayed).replace("+", "")
+                      : "No played hours"}
                   </Typography>
+                  {day.playtimeChanged !== day.minutesPlayed && day.playtimeChanged !== 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      net {duration(day.playtimeChanged)}
+                    </Typography>
+                  )}
                   {day.playtimeTotal !== undefined && (
                     <Typography variant="caption" color="text.secondary">
                       {`${duration(day.playtimeTotal).replace("+", "")} total`}
@@ -430,9 +503,8 @@ function DayActivityList({ days, compact, onOpenJournal }: {
                 </Box>
               </Stack>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <ArrowUpwardRounded sx={{ fontSize: 18, color: "secondary.main" }} />
+                <TrendingUpRounded sx={{ fontSize: 18, color: "secondary.main" }} />
                 <Box>
-                  <Typography variant="overline" color="text.secondary">PROGRESS</Typography>
                   <Typography color={day.progressChanged > 0 ? "secondary.main" : undefined}>
                     {day.hasProgress
                       ? `${day.progress === undefined ? "Cleared" : `${day.progress}%`}${
@@ -445,14 +517,17 @@ function DayActivityList({ days, compact, onOpenJournal }: {
                 </Box>
               </Stack>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                {day.statuses.length ? (
+                {day.statusTransitions.length ? (
                   <SwapHorizRounded sx={{ fontSize: 18, color: "#e5a67b" }} />
                 ) : (
-                  <CheckCircleOutlineRounded sx={{ fontSize: 18, color: "text.secondary" }} />
+                  <CheckCircleRounded sx={{ fontSize: 18, color: "text.secondary" }} />
                 )}
                 <Box>
-                  <Typography variant="overline" color="text.secondary">STATUS</Typography>
-                  <Typography>{day.statuses.length ? day.statuses.join(" · ") : "No status change"}</Typography>
+                  <Typography>
+                    {day.statusTransitions.length
+                      ? day.statusTransitions.join(" · ")
+                      : "No status change"}
+                  </Typography>
                 </Box>
               </Stack>
             </Box>
@@ -464,6 +539,58 @@ function DayActivityList({ days, compact, onOpenJournal }: {
           Open full progress journal
         </Button>
       )}
+    </Paper>
+  );
+}
+
+function Milestones({ events, game }: { events: GameActivityEvent[]; game: Game }) {
+  const milestones = extractMilestones(events, game);
+  return (
+    <Paper variant="outlined" sx={{ p: { xs: 1.5, md: 2 } }}>
+      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", mb: 1.5 }}>
+        <Typography variant="h6">Detected milestones</Typography>
+        <Typography variant="caption" color="text.secondary">
+          Start / Hold / Drop / Complete tracking
+        </Typography>
+      </Stack>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "repeat(4,minmax(0,1fr))" },
+          gap: 1,
+        }}
+      >
+        {milestones.map((milestone) => {
+          const Icon = milestone.icon;
+          return (
+            <Box
+              key={milestone.key}
+              sx={{
+                border: 1,
+                borderColor: "divider",
+                borderRadius: 1.5,
+                p: 1.25,
+                minHeight: 76,
+              }}
+            >
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", mb: 0.5 }}>
+                <Icon sx={{ fontSize: 18, color: milestone.color }} />
+                <Typography sx={{ fontWeight: 700 }}>{milestone.label}</Typography>
+              </Stack>
+              {milestone.lastAt ? (
+                <>
+                  <Typography variant="body2">Last: {dateLabel(milestone.lastAt)}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {milestone.count ? `${milestone.count} time${milestone.count > 1 ? "s" : ""}` : "Recorded"}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary">Not recorded yet</Typography>
+              )}
+            </Box>
+          );
+        })}
+      </Box>
     </Paper>
   );
 }
@@ -540,7 +667,8 @@ export function GameProgressHistory({
     <DayActivityList days={days} compact onOpenJournal={onOpenJournal} />
   ) : (
     <Stack spacing={2.5}>
-      <JourneyChart events={events} game={game} />
+      <Milestones events={events} game={game} />
+      <MiniProgressChart days={days} game={game} />
       <DayActivityList days={days} compact={false} />
     </Stack>
   );

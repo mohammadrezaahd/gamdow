@@ -9,9 +9,10 @@ try {
   await client.connect();
   await client.db(process.env.MONGODB_DB || "gamdow").command({ ping: 1 });
   console.log("MongoDB connection successful.");
-} catch {
+} catch (err) {
   console.error(
     "MongoDB connection failed. Check the URI, database-user credentials, service status and network access rules.",
+    err,
   );
   process.exitCode = 1;
 } finally {

@@ -15,7 +15,6 @@ import { apiRequest, ApiError } from "@/services/http-client";
 import type { SteamProfileStats } from "@/types/steam";
 export function SteamProfilePanel() {
   const [data, setData] = useState<SteamProfileStats>(),
-    [offset, setOffset] = useState(0),
     [retry, setRetry] = useState(0);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -27,7 +26,7 @@ export function SteamProfilePanel() {
     async function load() {
       try {
         const result = await apiRequest<SteamProfileStats>(
-          `/api/steam/profile?offset=${offset}`,
+          "/api/steam/profile",
           {
             signal: AbortSignal.any([abort.signal, AbortSignal.timeout(60000)]),
           },
@@ -51,7 +50,7 @@ export function SteamProfilePanel() {
       active = false;
       abort.abort();
     };
-  }, [offset, retry]);
+  }, [retry]);
   useEffect(() => {
     const update = () => setRetry((n) => n + 1);
     window.addEventListener("gamdow:steam-updated", update);
@@ -74,7 +73,7 @@ export function SteamProfilePanel() {
               try {
                 await apiRequest("/api/steam/activity", { method: "POST" });
                 const result = await apiRequest<SteamProfileStats>(
-                  `/api/steam/profile?offset=${offset}`,
+                  "/api/steam/profile",
                   { method: "POST", signal: AbortSignal.timeout(60000) },
                 );
                 setData(result);
@@ -185,74 +184,18 @@ export function SteamProfilePanel() {
                 achievements here.
               </Alert>
             )}
-            {data.items.map((game) => (
-              <Box
-                key={game.steamAppId}
-                sx={{
-                  p: 1.5,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  minWidth: 0,
-                }}
-              >
-                <Button
-                  component="a"
-                  href={`/?page=library&game=${encodeURIComponent(game.gameId)}`}
-                  sx={{
-                    textAlign: "left",
-                    overflowWrap: "anywhere",
-                    justifyContent: "flex-start",
-                  }}
-                >
-                  {game.name}
-                </Button>
-                <Typography variant="body2">
-                  {game.totalMinutes !== undefined
-                    ? `${(game.totalMinutes / 60).toFixed(1)} h played`
-                    : "Playtime unavailable"}
-                </Typography>
-                {game.total !== undefined ? (
-                  <>
-                    <Typography variant="caption">
-                      Achievements · {game.unlocked} / {game.total}
-                      {game.percentage !== undefined
-                        ? ` · ${game.percentage}%`
-                        : ""}
-                    </Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={game.percentage ?? 0}
-                      sx={{ mt: 1 }}
-                    />
-                  </>
-                ) : (
-                  <Typography variant="caption" color="text.secondary">
-                    {game.state === "private"
-                      ? "Achievements private / inaccessible"
-                      : game.state === "unsupported"
-                        ? "No Steam achievements"
-                        : game.state === "unavailable"
-                          ? "Steam achievements currently unavailable"
-                          : "Achievements not synced yet"}
-                  </Typography>
-                )}
-              </Box>
-            ))}
-            <Stack direction="row" sx={{ justifyContent: "space-between" }}>
-              <Button
-                disabled={busy || offset === 0}
-                onClick={() => setOffset((n) => Math.max(0, n - 20))}
-              >
-                Previous
-              </Button>
-              <Button
-                disabled={busy || !data.hasMore}
-                onClick={() => setOffset((n) => n + 20)}
-              >
-                Next
-              </Button>
-            </Stack>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 1.5,
+                background: "linear-gradient(120deg, #d3fc720c, #c2fffb06)",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Per-game list is hidden here to keep this panel compact. Open
+                Library to inspect each imported game in detail.
+              </Typography>
+            </Paper>
           </>
         )}
       </Stack>
