@@ -23,6 +23,11 @@ export interface GameActivityEvent {
   source: GameActivitySource;
   occurredAt: string;
   recordedAt: string;
+  /** Historical metadata snapshot. Older events may not have these fields. */
+  gameTitle?: string;
+  genres?: string[];
+  platform?: string;
+  tags?: string[];
   fromStatus?: GameStatus;
   toStatus?: GameStatus;
   previousMinutes?: number;
@@ -58,7 +63,6 @@ export interface GameTimelinePage {
   statusSuggestion?: GameStatusSuggestion;
 }
 
-/** Aggregates used by the archive-wide Statistics page. */
 export interface ActivityPeriodSummary {
   period: string;
   eventCount: number;
@@ -91,6 +95,23 @@ export interface ActivityGameSummary {
   lastActivityAt?: string;
 }
 
+export interface ActivityBreakdown {
+  key: string;
+  label: string;
+  minutes: number;
+  events: number;
+  games: number;
+  activeDays: number;
+}
+
+export interface ActivityWeekdaySummary {
+  weekday: number;
+  label: string;
+  minutes: number;
+  events: number;
+  activeDays: number;
+}
+
 export interface ActivityFeedItem extends GameActivityEvent {
   gameTitle: string;
 }
@@ -118,11 +139,17 @@ export interface ActivityStatistics {
   totalMinutes: number;
   totalEvents: number;
   activeDays: number;
+  playDays: number;
   statusChanges: number;
   playtimeUpdates: number;
   progressUpdates: number;
   monthly: ActivityPeriodSummary[];
   daily: ActivityPeriodSummary[];
+  genres: ActivityBreakdown[];
+  platforms: ActivityBreakdown[];
+  sources: ActivityBreakdown[];
+  statuses: ActivityBreakdown[];
+  weekdays: ActivityWeekdaySummary[];
   games: ActivityGameSummary[];
   activities: ActivityFeedItem[];
 }
