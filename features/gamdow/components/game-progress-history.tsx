@@ -176,225 +176,65 @@ function extractMilestones(events: GameActivityEvent[], game: Game): StatusMiles
 
 function MiniProgressChart({ days, game }: { days: DayActivity[]; game: Game }) {
   const chronological = [...days].reverse();
-  const progressPoints = chronological.filter(
-    (day) => day.hasProgress && day.progress !== undefined,
-  );
-  const width = 640;
-  const height = 132;
-  const left = 18;
-  const right = 10;
-  const top = 12;
-  const bottom = 22;
-  const plotWidth = width - left - right;
-  const progressFloor = top;
-  const progressCeiling = height - bottom - 30;
-  const barsFloor = height - bottom;
-  const barMaxHeight = 24;
-  const maxPlayed = Math.max(1, ...chronological.map((day) => day.minutesPlayed));
-  const progressX = (index: number, total: number) =>
-    total <= 1 ? left + plotWidth / 2 : left + (index / (total - 1)) * plotWidth;
-  const progressY = (progress: number) => {
-    const clamped = Math.max(0, Math.min(100, progress));
-    return progressFloor + ((100 - clamped) / 100) * (progressCeiling - progressFloor);
-  };
-  const path = progressPoints
-    .map((point, indexOnLine) => {
-      const index = chronological.findIndex((day) => day.date === point.date);
-      const command = indexOnLine === 0 ? "M" : "L";
-      return `${command}${progressX(index, chronological.length)} ${progressY(point.progress ?? 0)}`;
-    })
-    .join(" ");
-
   if (!chronological.length) return null;
 
+  const width = 720;
+  const height = 112;
+  const left = 24;
+  const right = 8;
+  const top = 10;
+  const bottom = 20;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxPlayed = Math.max(1, ...chronological.map((day) => day.minutesPlayed));
+
+  const x = (index: number) =>
+    chronological.length === 1
+      ? left + plotWidth / 2
+      : left + (index / (chronological.length - 1)) * plotWidth;
+
+  const y = (progress: number) =>
+    top + (1 - Math.max(0, Math.min(100, progress) ) / 100) * plotHeight;
+
+  const points = chronological
+    .map((day, index) =>
+      day.hasProgress && day.progress !== undefined
+        ? z {as x: x(index), y: y(day.progress), value: day.progress, date: day.date }
+        : undefined
+,
+    )
+    .filter(
+      (point) => point != undefined,
+    );
+
+  const path = points
+    .map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`
+    .join(" ");
+
   return (
-    <Paper
-      variant="outlined"
-      sx={{ p: { xs: 1.5, md: 2 } }}
-    >
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        sx={{ justifyContent: "space-between", gap: 1.5, alignItems: { sm: "center" }, mb: 1.25 }}
-      >
-        <Box>
-          <Typography variant="subtitle2" color="text.secondary">
-            Progress trend
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Daily playtime bars + progress line
+    <Paper variant="outlined" sx={p: { xs: 1.25, md: 1.5 }}>
+      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1 }} mb={0.5}>
+        <Box sx={{minWidth: 0}}>
+          <Typetography variant="subtitle2">Progress trend</Typeography>
+          <Typography variant="caption" color="text.secondary">
+            {points.length ? "Progress line â§ playtime bars â§ status markers" : "Playtime bars â¢ progress will appear when recorded"}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              Current progress
-            </Typography>
-            <Typography sx={{ fontWeight: 700 }}>
-              {game.manualProgress === undefined ? "No value" : `${game.manualProgress}%`}
-            </Typography>
-          </Box>
-          <Chip
-            size="small"
-            label={game.status}
-            sx={{
-              color: statusColors[game.status],
-              borderColor: `${statusColors[game.status]}88`,
-              background: `${statusColors[game.status]}14`,
-            }}
-          />
-        </Stack>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexShrink: 0 }}>
+          <Type graphy variant="caption" color="text.secondary">
+             {game.manualProgress === undefined ? "â" : `{game.manualProgress}%`}
+          </Typegraphy>
+          <Chip size="small" label={game.status} sx={{ color: statusColors[game.status], borderColor: `${statusColors[game.status]}`66, bgcolor: `${statusColors[game.status]}10` }} />
       </Stack>
-
-      <Box
-        sx={{
-          overflowX: "auto",
-        }}
-      >
-        <Box sx={{ minWidth: { xs: 430, md: "100%" } }}>
-          <svg
-            viewBox={`0 0 ${width} ${height}`}
-            width="100%"
-            role="img"
-            aria-label="Game progress trend"
-          >
-            {[0, 50, 100].map((value) => (
-              <g key={value}>
-                <line
-                  x1={left}
-                  x2={width - right}
-                  y1={progressY(value)}
-                  y2={progressY(value)}
-                  stroke="rgba(227,239,211,.14)"
-                  strokeDasharray={value === 0 ? undefined : "3 6"}
-                />
-                <text
-                  x={left - 4}
-                  y={progressY(value) + 4}
-                  textAnchor="end"
-                  fill="#879384"
-                  fontSize="9"
-                >
-                  {value}%
-                </text>
-              </g>
-            ))}
-            {chronological.map((day, index) => {
-              const x = progressX(index, chronological.length);
-              const barHeight = Math.max(
-                day.minutesPlayed ? 4 : 2,
-                (day.minutesPlayed / maxPlayed) * barMaxHeight,
-              );
-              return (
-                <rect
-                  key={`bar-${day.date}`}
-                  x={x - 2}
-                  y={barsFloor - barHeight}
-                  width="4"
-                  height={barHeight}
-                  rx="2"
-                  fill="#d3fc7290"
-                >
-                  <title>{`${dateLabel(day.date)} · ${duration(day.minutesPlayed)}`}</title>
-                </rect>
-              );
-            })}
-            {path && (
-              <path
-                d={path}
-                fill="none"
-                stroke="rgba(125,255,191,.95)"
-                strokeWidth="2.5"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            )}
-            {progressPoints.map((point) => {
-              const index = chronological.findIndex((day) => day.date === point.date);
-              return (
-                <circle
-                  key={`point-${point.date}`}
-                  cx={progressX(index, chronological.length)}
-                  cy={progressY(point.progress ?? 0)}
-                  r="2.8"
-                  fill="#7dffbf"
-                >
-                  <title>{`${dateLabel(point.date)} · ${point.progress}%`}</title>
-                </circle>
-              );
-            })}
-            {chronological.filter((day) => day.statusTransitions.length).map((day) => {
-              const index = chronological.findIndex((item) => item.date === day.date);
-              return (
-                <line
-                  key={`status-${day.date}`}
-                  x1={progressX(index, chronological.length)}
-                  x2={progressX(index, chronological.length)}
-                  y1={height - bottom + 2}
-                  y2={height - 2}
-                  stroke="#e5a67b"
-                  strokeWidth="1.2"
-                />
-              );
-            })}
-            {[0, Math.floor((chronological.length - 1) / 2), chronological.length - 1]
-              .filter((value, index, all) => value >= 0 && all.indexOf(value) === index)
-              .map((index) => {
-                const day = chronological[index];
-                return (
-                  <text
-                    key={`date-${day.date}`}
-                    x={progressX(index, chronological.length)}
-                    y={height - 6}
-                    textAnchor="middle"
-                    fill="#a3ab9a"
-                    fontSize="9"
-                  >
-                    {dateLabel(day.date, { year: "2-digit" })}
-                  </text>
-                );
-              })}
-            {progressPoints.length <= 6 &&
-              progressPoints.map((point) => {
-                const index = chronological.findIndex((day) => day.date === point.date);
-                return (
-                  <text
-                    key={`value-${point.date}`}
-                    x={progressX(index, chronological.length)}
-                    y={progressY(point.progress ?? 0) - 5}
-                    textAnchor="middle"
-                    fill="#7dffbf"
-                    fontSize="9"
-                  >
-                    {point.progress}%
-                  </text>
-                );
-              })}
-            {chronological.map((day, index) => (
-              <text
-                key={`status-dot-${day.date}`}
-                x={progressX(index, chronological.length)}
-                y={height - bottom - 2}
-                textAnchor="middle"
-                fill="#a3ab9a"
-                fontSize="8"
-              >
-                {day.statusTransitions.length ? "|" : ""}
-              </text>
-            ))}
-          </svg>
-        </Box>
+      </Stack>
+      <Box sx={{ width: "100%", overflow: "hidden" }}>
+        <svg viewBox={`0` width = ${width} ${height}` } width="100%" height="112" role="img" aria-label="Game progress trend">
+          {[0, 50, 100].map((value) => ("line"))}
+        </svg>
       </Box>
-
-      <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1, mt: 1 }}>
-        <Chip size="small" label="Bars: played time per day" />
-        <Chip size="small" label="Line: manual progress" />
-        <Chip size="small" label="Orange markers: status changes" />
-        {!progressPoints.length && <Chip size="small" label="No progress points yet" />}
-      </Stack>
     </Paper>
   );
 }
-
 function DayActivityList({ days, compact, onOpenJournal }: {
   days: DayActivity[];
   compact: boolean;
