@@ -88,9 +88,18 @@ export function deriveGameActivity(
   const add = (
     value: Omit<
       GameActivityEvent,
-      "id" | "gameId" | "recordedAt" | "source"
+      "id" | "gameId" | "recordedAt" | "source" | "gameTitle" | "genres" | "platform" | "tags"
     >,
-  ) => events.push(event(context, game.id, events.length, value));
+  ) =>
+    events.push(
+      event(context, game.id, events.length, {
+        ...value,
+        gameTitle: game.title,
+        genres: [...game.genres],
+        platform: game.platform,
+        tags: [...game.tags],
+      }),
+    );
 
   if (!previous) {
     add({
@@ -376,6 +385,10 @@ export function reconcileExternalGameActivity(
           previousMinutes: before,
           totalMinutes: after,
           deltaMinutes: delta,
+          gameTitle: game.title,
+          genres: [...game.genres],
+          platform: game.platform,
+          tags: [...game.tags],
           inferred: true,
           note:
             before === undefined
