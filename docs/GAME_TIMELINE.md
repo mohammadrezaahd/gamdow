@@ -1,8 +1,8 @@
 # Activity tracking and Statistics
 
-Gamdow keeps a per-user append-only activity read model. The activity is no
-longer shown as a per-game Timeline tab; the Statistics page is the single
-archive-wide view for status changes, playtime changes and provider activity.
+Gamdow keeps a per-user append-only activity read model. The Statistics page is the archive-wide view, while each game's Journal shows
+a compact progress chart and daily activity history built from the same event
+archive.
 
 ## Data flow
 
@@ -27,6 +27,9 @@ that compatibility endpoint is read for the first time.
 - Every status change, manual playtime change and manual progress change is
   recorded as an event. Progress events keep the previous value, new value and
   percentage-point delta.
+- Activity events snapshot the game's title, genres, platform and tags when
+  available. This preserves the context needed for future year-end reports
+  even if the current game metadata changes later.
 - Steam playtime is authoritative for linked Steam games. A changed Steam total
   updates `hoursPlayed` in the archive and creates a playtime activity record.
 - A Steam game with verified zero playtime becomes `Not started`.
