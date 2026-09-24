@@ -6,11 +6,13 @@ import { libraryView } from "./library-storage";
 import type { Game } from "@/types/game";
 import { statuses } from "@/lib/library-schema";
 import type {
+  ActivityBreakdown,
   ActivityFeedItem,
   ActivityGameSummary,
   ActivityPeriodSummary,
   ActivityStatistics,
   ActivityStatisticsQuery,
+  ActivityWeekdaySummary,
   GameActivityEvent,
 } from "@/types/game-activity";
 import type { GameActivityEventDocument } from "./game-activity/models";
@@ -125,6 +127,103 @@ function gameSummary(game: Game): ActivityGameSummary {
  * collection. The current game list is joined separately so every game appears
  * in the game table, including games imported before activity tracking existed.
  */
+function isPlayActivity(event: GameActivityEvent) {
+  return event.type === "PLAYTIME_UPDATED" || event.type === "EXTERNAL_ACTIVITY";
+}
+
+function breakdown(
+  games: Game[],
+  activities: ActivityFeedItem[],
+  selector: (game: Game) => string[],
+): ActivityBreakdown[] {
+  const rows = new Map<string, { minutes: number; events: number; games: Set<string>; days: Set<string> }>();
+  for (const game of games) {
+    for (const key of selector(game)) {
+      const row = rows.get(key) ?? { minutes: 0, events: 0, games: new Set<string>(), days: new Set<string>() };
+      row.minutes += game.hoursPlayed ? game.hoursPlayed * 60 : 0;
+      row.games.add(game.id);
+      rows.set(key, row);
+    }
+  }
+  for (const event of activities) {
+    const game = games.find((item) => item.id === event.gameId);
+    const keys = event.genres?.length ? event.genres : game ? selector(game) : [];
+    for (const key of keys) {
+      const row = rows.get(key) ?? { minutes: 0, events: 0, games: new Set<string>(), days: new Set<string>() };
+      row.events += 1;
+      row.games.add(event.gameId);
+      row.days.add(eventDate(event));
+      rows.set(key, row);
+    }
+  }
+  return [...rows.entries()]
+    .map(([key, row]) => ({
+      key,
+      label: key,
+      minutes: Math.round(row.minutes),
+      events: row.events,
+      games: row.games.size,
+      activeDays: row.days.size,
+    }))
+    .sort((a, b) => b.minutes - a.minutes || b.events - a.events || a.label.localeCompare(b.label));
+}
+
+function simpleBreakdown(games: Game[], activities: ActivityFeedItem[], keyFor: (game: Game) => string): ActivityBreakdown[] {
+  const rows = new Map<string, ActivityBreakdown>();
+  for (const game of games) {
+    const key = keyFor(game);
+    const row = rows.get(key) ?? { key, label: key, minutes: 0, events: 0, games: 0, activeDays: 0 };
+    row.minutes += game.hoursPlayed ? game.hoursPlayed * 60 : 0;
+    row.games += 1;
+    rows.set(key, row);
+  }
+  const days = new Map<string, Set<string>>();
+  for (const event of activities) {
+    const key = event.source;
+    const row = rows.get(key) ?? { key, label: key, minutes: 0, events: 0, games: 0, activeDays: 0 };
+    row.events += 1;
+    const set = days.get(key) ?? new Set<string>();
+    set.add(eventDate(event));
+    days.set(key, set);
+    rows.set(key, row);
+  }
+  for (const [key, set] of days) rows.get(key)!.activeDays = set.size;
+  return [...rows.values()].sort((a, b) => b.minutes - a.minutes);
+}
+
+function statusBreakdown(games: Game[], activities: ActivityFeedItem[]): ActivityBreakdown[] {
+  const rows = new Map<string, ActivityBreakdown>();
+  for (const status of statuses) rows.set(status, { key: status, label: status, minutes: 0, events: 0, games: 0, activeDays: 0 });
+  for (const game of games) {
+    const row = rows.get(game.status)!;
+    row.games += 1;
+    row.minutes += game.hoursPlayed ? game.hoursPlayed * 60 : 0;
+  }
+  for (const event of activities) if (event.toStatus) {
+    const row = rows.get(event.toStatus);
+    if (row) row.events += 1;
+  }
+  return [...rows.values()].filter((row) => row.games || row.events);
+}
+
+function weekdayBreakdown(activities: ActivityFeedItem[]): ActivityWeekdaySummary[] {
+  const rows = Array.from({ length: 7 }, (_, weekday) => ({
+    weekday,
+    label: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(new Date(Date.UTC(2023, 0, 1 + weekday))),
+    minutes: 0,
+    events: 0,
+    activeDays: 0,
+  }));
+  const days = Array.from({ length: 7 }, () => new Set<string>());
+  for (const event of activities) if (isPlayActivity(event)) {
+    const weekday = new Date(event.occurredAt).getUTCDay();
+    rows[weekday].minutes += Math.max(0, event.deltaMinutes ?? 0);
+    rows[weekday].events += 1;
+    days[weekday].add(eventDate(event));
+  }
+  return rows.map((row, index) => ({ ...row, minutes: Math.round(row.minutes), activeDays: days[index].size }));
+}
+
 export async function activityStatistics(
   account: Pick<AccountDocument, "_id" | "snapshot">,
   query: ActivityStatisticsQuery = {},
@@ -217,6 +316,7 @@ export async function activityStatistics(
     totalMinutes: Math.round(totalMinutes),
     totalEvents: activities.length,
     activeDays,
+    playDays: new Set(activities.filter(isPlayActivity).map(eventDate)).size,
     statusChanges: activities.filter(
       (event) => event.type === "STATUS_CHANGED",
     ).length,
@@ -229,11 +329,16 @@ export async function activityStatistics(
     ).length,
     monthly: sortPeriods(monthly),
     daily: sortPeriods(daily),
+    genres: breakdown(matchingGames, activities, (game) => game.genres),
+    platforms: breakdown(matchingGames, activities, (game) => [game.platform]),
+    sources: simpleBreakdown(matchingGames, activities, (game) => game.source ?? "MANUAL"),
+    statuses: statusBreakdown(matchingGames, activities),
+    weekdays: weekdayBreakdown(activities),
     games: [...games.values()].sort((a, b) => {
       if (b.totalMinutes !== a.totalMinutes)
         return b.totalMinutes - a.totalMinutes;
       return a.title.localeCompare(b.title);
     }),
-    activities,
+    activities: activities.slice(0, 2000),
   };
 }
