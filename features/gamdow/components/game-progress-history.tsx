@@ -187,49 +187,136 @@ function MiniProgressChart({ days, game }: { days: DayActivity[]; game: Game }) 
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
   const maxPlayed = Math.max(1, ...chronological.map((day) => day.minutesPlayed));
-
   const x = (index: number) =>
     chronological.length === 1
       ? left + plotWidth / 2
       : left + (index / (chronological.length - 1)) * plotWidth;
-
   const y = (progress: number) =>
-    top + (1 - Math.max(0, Math.min(100, progress) ) / 100) * plotHeight;
+    top + (1 - Math.max(0, Math.min(100, progress)) / 100) * plotHeight;
 
   const points = chronological
     .map((day, index) =>
       day.hasProgress && day.progress !== undefined
-        ? z {as x: x(index), y: y(day.progress), value: day.progress, date: day.date }
-        : undefined
-,
+        ? { x: x(index), y: y(day.progress), value: day.progress, date: day.date }
+        : undefined,
     )
     .filter(
-      (point) => point != undefined,
+      (point): point is { x: number; y: number; value: number; date: string } =>
+        point !== undefined,
     );
-
   const path = points
-    .map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`
+    .map((point, index) => (index ? "L " : "M ") + point.x + " " + point.y)
     .join(" ");
 
   return (
-    <Paper variant="outlined" sx={p: { xs: 1.25, md: 1.5 }}>
+    <Paper variant="outlined" sx={{ p: { xs: 1.25, md: 1.5 } }}>
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1 }} mb={0.5}>
-        <Box sx={{minWidth: 0}}>
-          <Typetography variant="subtitle2">Progress trend</Typeography>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="subtitle2">Progress trend</Typography>
           <Typography variant="caption" color="text.secondary">
-            {points.length ? "Progress line â§ playtime bars â§ status markers" : "Playtime bars â¢ progress will appear when recorded"}
+            {points.length ? "Progress line · playtime bars · status markers" : "Playtime bars · progress will appear when recorded"}
           </Typography>
         </Box>
         <Stack direction="row" spacing={0.75} sx={{ alignItems: "center", flexShrink: 0 }}>
-          <Type graphy variant="caption" color="text.secondary">
-             {game.manualProgress === undefined ? "â" : `{game.manualProgress}%`}
-          </Typegraphy>
-          <Chip size="small" label={game.status} sx={{ color: statusColors[game.status], borderColor: `${statusColors[game.status]}`66, bgcolor: `${statusColors[game.status]}10` }} />
+          <Typography variant="caption" color="text.secondary">
+            {game.manualProgress === undefined ? "—" : game.manualProgress + "%"}
+          </Typography>
+          <Chip
+            size="small"
+            label={game.status}
+            sx={{
+              color: statusColors[game.status],
+              borderColor: statusColors[game.status] + "66",
+              bgcolor: statusColors[game.status] + "10",
+            }}
+          />
+        </Stack>
       </Stack>
-      </Stack>
+
       <Box sx={{ width: "100%", overflow: "hidden" }}>
-        <svg viewBox={`0` width = ${width} ${height}` } width="100%" height="112" role="img" aria-label="Game progress trend">
-          {[0, 50, 100].map((value) => ("line"))}
+        <svg viewBox={"0 0 " + width + " " + height} width="100%" height="112" role="img" aria-label="Game progress trend">
+          {[0, 50, 100].map((value) => (
+            <line
+              key={value}
+              x1={left}
+              x2={width - right}
+              y1={y(value)}
+              y2={y(value)}
+              stroke="currentColor"
+              opacity={value === 0 ? 0.14 : 0.06}
+              strokeDasharray={value === 0 ? undefined : "3 5"}
+            />
+          ))}
+
+          {chronological.map((day, index) => {
+            const barHeight = day.minutesPlayed
+              ? Math.max(3, (day.minutesPlayed / maxPlayed) * 20)
+              : 2;
+            return (
+              <rect
+                key={"bar-" + day.date}
+                x={x(index) - 2}
+                y={height - bottom - barHeight}
+                width="4"
+                height={barHeight}
+                rx="2"
+                fill="currentColor"
+                opacity="0.22"
+              >
+                <title>{dateLabel(day.date) + " · " + duration(day.minutesPlayed) + " played"}</title>
+              </rect>
+            );
+          })}
+
+          {path && (
+            <path
+              d={path}
+              fill="none"
+              stroke="currentColor"
+              opacity="0.9"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+
+          {points.map((point) => (
+            <circle key={point.date} cx={point.x} cy={point.y} r="2.5" fill="currentColor">
+              <title>{dateLabel(point.date) + " · " + point.value + "%"}</title>
+            </circle>
+          ))}
+
+          {chronological.filter((day) => day.statusTransitions.length).map((day) => {
+            const index = chronological.findIndex((item) => item.date === day.date);
+            return (
+              <line
+                key={"status-" + day.date}
+                x1={x(index)}
+                x2={x(index)}
+                y1={height - bottom + 1}
+                y2={height - 2}
+                stroke="currentColor"
+                opacity="0.5"
+                strokeWidth="1.5"
+              />
+            );
+          })}
+
+          {[0, Math.floor((chronological.length - 1) / 2), chronological.length - 1]
+            .filter((value, index, all) => value >= 0 && all.indexOf(value) === index)
+            .map((index) => (
+              <text
+                key={"date-" + chronological[index].date}
+                x={x(index)}
+                y={height - 6}
+                textAnchor="middle"
+                fill="currentColor"
+                opacity="0.45"
+                fontSize="8"
+              >
+                {dateLabel(chronological[index].date, { year: "2-digit" })}
+              </text>
+            ))}
         </svg>
       </Box>
     </Paper>
