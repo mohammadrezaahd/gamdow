@@ -96,6 +96,90 @@ function JourneySummary({ game }: { game: Game }) {
     </Paper>
   );
 }
+
+function ProgressChart({ days }: { days: DayActivity[] }) {
+  const records = [...days].reverse();
+  const width = 760;
+  const height = 230;
+  const left = 42;
+  const right = 14;
+  const top = 18;
+  const bottom = 34;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxMinutes = Math.max(60, ...records.map((day) => day.minutesPlayed));
+  const x = (index: number) => records.length < 2
+    ? left + plotWidth / 2
+    : left + (index / (records.length - 1)) * plotWidth;
+  const y = (value: number) => top + (1 - Math.max(0, Math.min(100, value)) / 100) * plotHeight;
+  const points = records.flatMap((day, index) =>
+    day.hasProgress && day.progress !== undefined
+      ? [{ x: x(index), y: y(day.progress), value: day.progress, date: day.date }]
+      : [],
+  );
+  const progressPath = points.map((point, index) => `${index ? "L" : "M"} ${point.x} ${point.y}`).join(" ");
+  const barWidth = Math.max(3, Math.min(18, plotWidth / Math.max(1, records.length) * 0.48));
+  const labelIndexes = records.length <= 3
+    ? records.map((_, index) => index)
+    : [...new Set([0, Math.floor((records.length - 1) / 2), records.length - 1])];
+
+  return (
+    <Paper variant="outlined" sx={{ p: { xs: 1.5, sm: 2.5 }, overflow: "hidden" }}>
+      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1, mb: 1.5 }}>
+        <Box>
+          <Typography variant="h6">Play &amp; progress</Typography>
+          <Typography variant="body2" color="text.secondary">Each day combines your playtime and progress updates.</Typography>
+        </Box>
+        <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
+          <Stack direction="row" spacing={.75} sx={{ alignItems: "center" }}>
+            <Box sx={{ width: 10, height: 10, bgcolor: "primary.main", borderRadius: .5 }} />
+            <Typography variant="caption">Playtime</Typography>
+          </Stack>
+          <Stack direction="row" spacing={.75} sx={{ alignItems: "center" }}>
+            <Box sx={{ width: 12, height: 2, bgcolor: "secondary.main" }} />
+            <Typography variant="caption">Progress</Typography>
+          </Stack>
+        </Stack>
+      </Stack>
+      {!records.length ? (
+        <Box sx={{ height: 170, display: "grid", placeItems: "center", color: "text.secondary" }}>
+          <Typography variant="body2">Your chart will take shape as you log playtime or progress.</Typography>
+        </Box>
+      ) : (
+        <Box sx={{ width: "100%", overflowX: "auto", overflowY: "hidden" }}>
+          <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minWidth: 560 }} role="img" aria-label="Daily playtime bars and progress trend">
+            {[0, 50, 100].map((value) => (
+              <g key={value}>
+                <line x1={left} x2={width - right} y1={y(value)} y2={y(value)} stroke="currentColor" opacity={value === 0 ? .2 : .08} />
+                <text x={left - 9} y={y(value) + 4} textAnchor="end" fill="currentColor" opacity=".55" fontSize="10">{value}%</text>
+              </g>
+            ))}
+            {records.map((day, index) => {
+              const barHeight = day.minutesPlayed > 0 ? Math.max(3, (day.minutesPlayed / maxMinutes) * plotHeight * .42) : 0;
+              return barHeight ? (
+                <rect key={`play-${day.date}`} x={x(index) - barWidth / 2} y={top + plotHeight - barHeight} width={barWidth} height={barHeight} rx={Math.min(4, barWidth / 2)} fill="#d3fc72" opacity=".8">
+                  <title>{`${dateLabel(day.date)} · ${duration(day.minutesPlayed)} played`}</title>
+                </rect>
+              ) : null;
+            })}
+            {points.length > 1 && <path d={progressPath} fill="none" stroke="#e5a67b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" opacity=".95" />}
+            {points.map((point) => (
+              <circle key={`progress-${point.date}`} cx={point.x} cy={point.y} r="4.5" fill="#e5a67b" stroke="#171a15" strokeWidth="2">
+                <title>{`${dateLabel(point.date)} · ${point.value}% progress`}</title>
+              </circle>
+            ))}
+            {labelIndexes.map((index) => (
+              <text key={`date-${records[index].date}`} x={x(index)} y={height - 9} textAnchor="middle" fill="currentColor" opacity=".55" fontSize="10">
+                {dateLabel(records[index].date, { year: "2-digit" })}
+              </text>
+            ))}
+          </svg>
+        </Box>
+      )}
+    </Paper>
+  );
+}
+
 function DayActivityList({ days, compact, onOpenJournal }: {
   days: DayActivity[];
   compact: boolean;
@@ -289,6 +373,7 @@ export function GameProgressHistory({
   ) : (
     <Stack spacing={2}>
       <JourneySummary game={game} />
+      <ProgressChart days={days} />
       <DayActivityList days={days} compact={false} />
     </Stack>
   );

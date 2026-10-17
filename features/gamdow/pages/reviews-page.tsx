@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   Card,
   CardActionArea,
+  Box,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -26,6 +27,7 @@ export function ReviewsPage({
   const [picker, setPicker] = useState(false);
   const [id, setId] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState<string[]>([]);
   const games = data.games
     .filter(
       (g) =>
@@ -102,9 +104,10 @@ export function ReviewsPage({
         />
       ) : (
         <Stack spacing={2}>
-          {games.map((g) => (
-            <Card key={g.id}>
-              <CardActionArea onClick={() => onGame(g.id, 1)} sx={{ p: 3 }}>
+          {games.map((g) => {
+            const hidden = g.reviewSpoiler && data.preferences.hideSpoilers && !revealed.includes(g.id);
+            return <Card key={g.id}>
+              <CardActionArea onClick={() => onGame(g.id, 1)} sx={{ p: 3, pb: 1 }}>
                 <Stack
                   direction="row"
                   spacing={2}
@@ -117,24 +120,27 @@ export function ReviewsPage({
                   )}
                   {g.reviewSpoiler && <Chip size="small" label="Spoilers" />}
                 </Stack>
+              </CardActionArea>
+              <Box sx={{ position: "relative", mx: 3, mb: 3, mt: 1, minHeight: 56 }}>
                 <Typography
                   color="text.secondary"
                   sx={{
-                    mt: 2,
                     whiteSpace: "pre-wrap",
                     display: "-webkit-box",
                     WebkitLineClamp: 3,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
+                    filter: hidden ? "blur(7px)" : "none",
+                    userSelect: hidden ? "none" : "auto",
                   }}
+                  aria-hidden={hidden ? "true" : undefined}
                 >
-                  {g.reviewSpoiler && data.preferences.hideSpoilers
-                    ? "Spoiler review hidden. Open the game to reveal it."
-                    : g.review}
+                  {g.review}
                 </Typography>
-              </CardActionArea>
-            </Card>
-          ))}
+                {hidden && <Button variant="contained" size="small" onClick={() => setRevealed((items) => [...items, g.id])} sx={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", whiteSpace: "nowrap" }}>Reveal spoiler</Button>}
+              </Box>
+            </Card>;
+          })}
         </Stack>
       )}
       <Dialog

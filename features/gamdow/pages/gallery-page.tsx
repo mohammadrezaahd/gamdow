@@ -2,6 +2,7 @@
 import { DateField } from "@/components/ui";
 import {
   Button,
+  Chip,
   Dialog,
   IconButton,
   MenuItem,
@@ -120,29 +121,25 @@ export function GalleryPage({
       ) : (
         <Box sx={{ columns: { xs: 1, sm: 2, xl: 3 }, gap: 2 }}>
           {items.map((p) => (
-            <Card key={p.id} sx={{ mb: 2, breakInside: "avoid" }}>
-              <CardActionArea onClick={() => setSelected(p.id)}>
-                {hidden(p) ? (
-                  <Box
-                    sx={{ height: 190, display: "grid", placeItems: "center" }}
-                  >
-                    <Typography>Spoiler · Open to reveal</Typography>
+              <Card key={p.id} sx={{ mb: 2, breakInside: "avoid" }}>
+                <CardActionArea onClick={() => setSelected(p.id)}>
+                  <Box sx={{ position: "relative", overflow: "hidden", minHeight: 190, bgcolor: "background.default" }}>
+                    <GameImage
+                      src={p.image}
+                      alt={hidden(p) ? "" : p.caption}
+                      sx={{ display: "block", width: "100%", maxHeight: 380, objectFit: "cover", filter: hidden(p) ? "blur(12px)" : "none", transform: hidden(p) ? "scale(1.06)" : "none" }}
+                    />
+                    {hidden(p) && <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", bgcolor: "#0005" }}>
+                      <Chip label="Spoiler · open to view" color="primary" />
+                    </Box>}
                   </Box>
-                ) : (
-                  <GameImage
-                    src={p.image}
-                    alt={p.caption}
-                    sx={{ display: "block", width: "100%" }}
-                  />
-                )}
-                <Box sx={{ p: 2 }}>
-                  <Typography sx={{ fontWeight: 700 }}>{p.caption}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {data.games.find((g) => g.id === p.gameId)?.title} ·{" "}
-                    {p.capturedAt}
-                  </Typography>
-                </Box>
-              </CardActionArea>
+                  <Box sx={{ p: 2 }}>
+                    <Typography sx={{ fontWeight: 700, filter: hidden(p) ? "blur(5px)" : "none", userSelect: hidden(p) ? "none" : "auto" }}>{p.caption}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ filter: hidden(p) ? "blur(4px)" : "none", userSelect: hidden(p) ? "none" : "auto" }}>
+                      {data.games.find((g) => g.id === p.gameId)?.title} · {p.capturedAt}
+                    </Typography>
+                  </Box>
+                </CardActionArea>
               <Stack direction="row" sx={{ px: 1, pb: 1 }}>
                 <IconButton
                   aria-label="Favorite screenshot"
@@ -200,7 +197,9 @@ export function GalleryPage({
         }}
       >
         <DialogTitle>
-          {photo?.caption}
+          <Typography component="span" sx={{ filter: photo && hidden(photo) ? "blur(5px)" : "none" }}>
+            {photo?.caption}
+          </Typography>
           <IconButton
             aria-label="Close image"
             onClick={() => setSelected(null)}
@@ -212,9 +211,16 @@ export function GalleryPage({
         {photo && (
           <DialogContent>
             {hidden(photo) ? (
-              <Button onClick={() => setRevealed((r) => [...r, photo.id])}>
-                Reveal spoiler
-              </Button>
+              <Box sx={{ position: "relative", overflow: "hidden", display: "grid", placeItems: "center", bgcolor: "background.default" }}>
+                <GameImage
+                  src={photo.image}
+                  alt=""
+                  sx={{ width: "100%", maxHeight: "70vh", objectFit: "contain", filter: "blur(12px)", transform: "scale(1.04)" }}
+                />
+                <Button variant="contained" onClick={() => setRevealed((r) => [...r, photo.id])} sx={{ position: "absolute" }}>
+                  Reveal spoiler
+                </Button>
+              </Box>
             ) : (
               <GameImage
                 src={photo.image}

@@ -12,9 +12,11 @@ import type { GameCollection } from "@/types/game";
 import { newId, useLibrary } from "../library-context";
 export function CollectionForm({
   collection,
+  focusGames = false,
   onClose,
 }: {
   collection?: GameCollection;
+  focusGames?: boolean;
   onClose: () => void;
 }) {
   const { data, saveCollection } = useLibrary();
@@ -38,24 +40,24 @@ export function CollectionForm({
         }}
       >
         <DialogTitle>
-          {collection ? "Edit collection" : "Create collection"}
+          {focusGames ? "Add games" : collection ? "Edit collection" : "Create collection"}
         </DialogTitle>
         <DialogContent dividers>
           <Stack spacing={2}>
-            <TextField
-              autoFocus
+            {!focusGames && <TextField
+              autoFocus={!focusGames}
               label="Collection name"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-            />
-            <TextField
+            />}
+            {!focusGames && <TextField
               label="Description"
               multiline
               minRows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-            />
+            />}
             <Autocomplete
               multiple
               options={data.games}
@@ -67,8 +69,9 @@ export function CollectionForm({
               renderInput={(p) => (
                 <TextField
                   {...p}
-                  label="Games"
-                  helperText="Games appear in the order you select them."
+                  autoFocus={focusGames}
+                  label={focusGames ? "Select games to add" : "Games"}
+                  helperText={focusGames ? "Existing games stay selected. Add or remove titles, then save." : "Games appear in the order you select them."}
                 />
               )}
             />
@@ -76,8 +79,8 @@ export function CollectionForm({
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={!name.trim()}>
-            Save collection
+          <Button type="submit" variant="contained" disabled={focusGames ? !collection : !name.trim()}>
+            {focusGames ? "Save games" : "Save collection"}
           </Button>
         </DialogActions>
       </Box>

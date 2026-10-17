@@ -15,7 +15,7 @@ import {
   TextField,
 } from "@/components/ui";
 import { useState } from "react";
-import { Accordion, AccordionDetails, AccordionSummary, Box, Divider, Paper, Stack, Typography } from "@mui/material";
+import { Accordion, AccordionDetails, AccordionSummary, Box, Divider, FormControl, InputLabel, Paper, Select, Stack, Typography } from "@mui/material";
 import {
   ArrowBackRounded,
   DeleteOutlineRounded,
@@ -211,12 +211,21 @@ export function GameDetail({
               </Typography>
             )}
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))", lg: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}>
-              <TextField
-                select label="Status" value={game.status}
-                onChange={(e) => saveGame({ ...game, status: e.target.value as Game["status"] })}
-              >
-                {statuses.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
-              </TextField>
+              <Paper sx={{ p: 2, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <Typography variant="caption" color="text.secondary">Status</Typography>
+                <Chip size="small" color="primary" label={game.status} sx={{ mt: 1, alignSelf: "flex-start" }} />
+                <FormControl variant="standard" fullWidth sx={{ mt: 2 }}>
+                  <InputLabel id={`game-status-${game.id}`}>Change status</InputLabel>
+                  <Select
+                    labelId={`game-status-${game.id}`}
+                    value={game.status}
+                    label="Change status"
+                    onChange={(e) => saveGame({ ...game, status: e.target.value as Game["status"] })}
+                  >
+                    {statuses.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+                  </Select>
+                </FormControl>
+              </Paper>
               <PlaytimeControl game={game} />
               <ProgressControl game={game} />
             </Box>
@@ -257,9 +266,16 @@ export function GameDetail({
               </Button>
             </Stack>
             {game.reviewSpoiler && data.preferences.hideSpoilers && !reveal ? (
-              <Button onClick={() => setReveal(true)}>
-                Reveal spoiler review
-              </Button>
+              <Box sx={{ position: "relative", overflow: "hidden", borderRadius: 2, border: 1, borderColor: "divider", p: 2 }}>
+                <Typography aria-hidden="true" sx={{ whiteSpace: "pre-wrap", filter: "blur(7px)", userSelect: "none" }}>
+                  {game.review || "Review text"}
+                  {game.reviewPros && `\nWhat worked: ${game.reviewPros}`}
+                  {game.reviewCons && `\nWhat didn’t: ${game.reviewCons}`}
+                </Typography>
+                <Button variant="contained" onClick={() => setReveal(true)} sx={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)", whiteSpace: "nowrap" }}>
+                  Reveal spoiler
+                </Button>
+              </Box>
             ) : (
               <>
                 <Typography sx={{ whiteSpace: "pre-wrap" }}>

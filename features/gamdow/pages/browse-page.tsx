@@ -29,6 +29,7 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
   const [managing, setManaging] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [form, setForm] = useState<GameCollection | "new" | null>(null);
+  const [focusGames, setFocusGames] = useState(false);
   const [remove, setRemove] = useState(false);
   const [status, setStatus] = useState("All");
   const [sort, setSort] = useState("default");
@@ -88,9 +89,12 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
         eyebrow="CURATED SHELVES"
         action={
           collection ? (
-            <Stack direction="row">
-              <Button onClick={() => setForm(collection)}>
-                Edit collection
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Button variant="contained" disabled={!data.games.length} onClick={() => { setFocusGames(true); setForm(collection); }}>
+                Add games
+              </Button>
+              <Button variant="outlined" onClick={() => { setFocusGames(false); setForm(collection); }}>
+                Edit details
               </Button>
               <Button color="error" onClick={() => setRemove(true)}>
                 Delete
@@ -106,7 +110,7 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
               <Button variant="outlined" onClick={() => setManaging(true)}>
                 Manage categories
               </Button>
-              <Button variant="contained" onClick={() => setForm("new")}>
+              <Button variant="contained" onClick={() => { setFocusGames(false); setForm("new"); }}>
                 Create collection
               </Button>
             </Stack>
@@ -177,7 +181,7 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
           {!games.length ? (
             <EmptyState
               title="No games here yet"
-              description="Edit this collection to choose games, or adjust your filters."
+              description={collection ? data.games.length ? "Choose Add games to put titles on this shelf." : "Add games to your library first, then choose Add games here." : "Adjust your filters to see more games."}
             />
           ) : collection && status === "All" && sort === "default" ? (
             <>
@@ -316,7 +320,8 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
       {form && (
         <CollectionForm
           collection={form === "new" ? undefined : form}
-          onClose={() => setForm(null)}
+          focusGames={focusGames}
+          onClose={() => { setForm(null); setFocusGames(false); }}
         />
       )}
       {remove && collection && (
