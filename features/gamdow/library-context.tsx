@@ -125,20 +125,34 @@ export function LibraryProvider({
       notify("Plan order updated");
     },
     saveGame: (game) => {
-      setData((d) =>
-        normalizeTaxonomies({
+      setData((d) => {
+        const previous = d.games.find((item) => item.id === game.id);
+        const enteringCompleted =
+          game.status === "Completed" && previous?.status !== "Completed";
+        const reachingFullProgress =
+          game.manualProgress === 100 && previous?.manualProgress !== 100;
+        const loweringCompletedProgress =
+          previous?.status === "Completed" &&
+          game.status === "Completed" &&
+          game.manualProgress !== previous.manualProgress &&
+          game.manualProgress !== 100;
+        const synchronized = enteringCompleted
+          ? { ...game, manualProgress: 100 }
+          : reachingFullProgress
+            ? { ...game, status: "Completed" as const }
+            : loweringCompletedProgress
+              ? { ...game, status: "Playing" as const }
+              : game;
+        const now = new Date().toISOString();
+        return normalizeTaxonomies({
           ...d,
           games: upsert(d.games, {
-            ...normalizeGameTracking(
-              d.games.find((item) => item.id === game.id),
-              game,
-              new Date().toISOString(),
-            ),
-            tags: normalizeTags(game.tags),
-            updatedAt: new Date().toISOString(),
+            ...normalizeGameTracking(previous, synchronized, now),
+            tags: normalizeTags(synchronized.tags),
+            updatedAt: now,
           }),
-        }),
-      );
+        });
+      });
       notify("Game updated");
     },
     adjustGamePlaytime: (id, deltaMinutes) => {

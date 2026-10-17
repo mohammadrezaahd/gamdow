@@ -211,7 +211,7 @@ export function GameDetail({
               </Typography>
             )}
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))", lg: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}>
-              <Paper sx={{ p: 2, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <Paper sx={{ p: 2, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "flex-start" }}>
                 <Typography variant="caption" color="text.secondary">Status</Typography>
                 <Chip size="small" color="primary" label={game.status} sx={{ mt: 1, alignSelf: "flex-start" }} />
                 <FormControl variant="standard" fullWidth sx={{ mt: 2 }}>

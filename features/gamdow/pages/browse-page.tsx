@@ -2,6 +2,8 @@
 import {
   Button,
   Chip,
+  Autocomplete,
+  Dialog,
   SortableBoard,
   MenuItem,
   Tab,
@@ -10,7 +12,7 @@ import {
 } from "@/components/ui";
 import { TaxonomyManager } from "../components/taxonomy-manager";
 import { useState } from "react";
-import { Box, Card, CardActionArea, Stack, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, DialogActions, DialogContent, DialogTitle, Stack, Typography } from "@mui/material";
 import { ArrowBackRounded } from "@mui/icons-material";
 import {
   ConfirmDialog,
@@ -22,7 +24,7 @@ import { GameImage } from "@/components/game-image";
 import { GameGrid } from "@/components/game-grid";
 import { CollectionForm } from "../forms/collection-form";
 import { useLibrary } from "../library-context";
-import type { GameCollection } from "@/types/game";
+import type { Game, GameCollection } from "@/types/game";
 export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
   const { data, saveGame, saveCollection, deleteCollection } = useLibrary();
   const [tab, setTab] = useState(0);
@@ -30,6 +32,8 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [form, setForm] = useState<GameCollection | "new" | null>(null);
   const [focusGames, setFocusGames] = useState(false);
+  const [assigningGames, setAssigningGames] = useState(false);
+  const [gamesToAssign, setGamesToAssign] = useState<Game[]>([]);
   const [remove, setRemove] = useState(false);
   const [status, setStatus] = useState("All");
   const [sort, setSort] = useState("default");
@@ -60,6 +64,11 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
             .map((game) => game.id),
         }));
   const group = groups.find((g) => g.id === selected);
+  const availableGames = group
+    ? data.games.filter((game) =>
+        tab === 1 ? !game.genreIds?.includes(group.id) : game.seriesId !== group.id,
+      )
+    : [];
   const games = (group?.ids ?? [])
     .map((id) => data.games.find((g) => g.id === id))
     .filter((g) => g !== undefined)
@@ -98,6 +107,15 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
               </Button>
               <Button color="error" onClick={() => setRemove(true)}>
                 Delete
+              </Button>
+            </Stack>
+          ) : group && tab !== 0 ? (
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+              <Button variant="contained" disabled={!availableGames.length} onClick={() => { setGamesToAssign([]); setAssigningGames(true); }}>
+                Add games
+              </Button>
+              <Button variant="outlined" onClick={() => setManaging(true)}>
+                Manage categories
               </Button>
             </Stack>
           ) : (
@@ -181,7 +199,11 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
           {!games.length ? (
             <EmptyState
               title="No games here yet"
-              description={collection ? data.games.length ? "Choose Add games to put titles on this shelf." : "Add games to your library first, then choose Add games here." : "Adjust your filters to see more games."}
+              description={collection
+                ? data.games.length ? "Choose Add games to put titles on this shelf." : "Add games to your library first, then choose Add games here."
+                : group && tab !== 0 && status === "All"
+                  ? availableGames.length ? "Choose Add games to assign titles to this category." : "Every game in your library is already assigned here."
+                  : "Adjust your filters to see more games."}
             />
           ) : collection && status === "All" && sort === "default" ? (
             <>
@@ -316,6 +338,50 @@ export function BrowsePage({ onGame }: { onGame: (id: string) => void }) {
           initialKind={tab === 2 ? "series" : "genre"}
           onClose={() => setManaging(false)}
         />
+      )}
+      {assigningGames && group && tab !== 0 && (
+        <Dialog open onClose={() => setAssigningGames(false)} fullWidth maxWidth="sm">
+          <DialogTitle>Add games to {group.name}</DialogTitle>
+          <DialogContent dividers>
+            <Autocomplete
+              multiple
+              filterSelectedOptions
+              options={availableGames}
+              value={gamesToAssign}
+              getOptionLabel={(game) => game.title}
+              onChange={(_, value) => setGamesToAssign(value)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  autoFocus
+                  label="Select games"
+                  placeholder="Search your library"
+                  helperText={tab === 1
+                    ? "Selected titles will be added to this genre."
+                    : "A game can belong to one series; adding it here changes its current series."}
+                />
+              )}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setAssigningGames(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              disabled={!gamesToAssign.length}
+              onClick={() => {
+                for (const game of gamesToAssign) {
+                  if (tab === 1)
+                    saveGame({ ...game, genres: [...new Set([...game.genres, group.name])] });
+                  else saveGame({ ...game, series: group.name });
+                }
+                setAssigningGames(false);
+                setGamesToAssign([]);
+              }}
+            >
+              Add {gamesToAssign.length || "games"}
+            </Button>
+          </DialogActions>
+        </Dialog>
       )}
       {form && (
         <CollectionForm

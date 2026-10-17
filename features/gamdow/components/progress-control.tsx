@@ -27,12 +27,16 @@ export function ProgressControl({ game }: { game: Game }) {
         valueLabelFormat={(value) => `${value}%`}
         onChangeCommitted={(_, value) => {
           const next = Array.isArray(value) ? value[0] : value;
-          saveGame({ ...game, manualProgress: next });
+          saveGame({
+            ...game,
+            manualProgress: next,
+            status: next === 100 ? "Completed" : game.status,
+          });
         }}
         sx={{ mt: 2, mb: 1 }}
       />
       <Typography variant="caption" color="text.secondary">
-        Drag to record progress. Every change is saved with today&apos;s play history.
+        Changes are saved to your play history. 100% marks the game complete.
       </Typography>
     </Paper>
   );
