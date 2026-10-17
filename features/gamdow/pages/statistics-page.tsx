@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 import { EmptyState, Metric, SectionTitle } from "@/components/page-parts";
 import { statisticsRepository } from "@/services/statistics-repository";
+import { SteamProfilePanel } from "../steam/steam-profile-panel";
 import type {
   ActivityBreakdown,
   ActivityPeriodSummary,
@@ -224,10 +225,11 @@ export function StatisticsPage() {
     <>
       <SectionTitle
         title="Statistics"
-        eyebrow="PLAY · TRACK · REMEMBER"
+        eyebrow="ACTIVITY ARCHIVE / SUPPORT VIEW"
         action={<Button variant="outlined" startIcon={<RefreshRounded />} disabled={loading} onClick={() => setRefresh((value) => value + 1)}>Refresh</Button>}
       />
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      <SteamProfilePanel />
 
       {statistics && (
         <Paper sx={{ p: { xs: 2, md: 2.5 }, mb: 3 }}>

@@ -1,14 +1,13 @@
 "use client";
 import { EpicConnectionPanel } from "../epic/epic-connection";
 import { SocialLogin } from "@/features/auth/social-login";
-import { SteamProfilePanel } from "../steam/steam-profile-panel";
 import { SteamConnectionPanel } from "../steam/steam-connection";
 import { useState } from "react";
 import { authRepository } from "@/services/auth-repository";
-import { Alert, Avatar, Box, Paper, Stack, Typography } from "@mui/material";
-import { EditRounded } from "@mui/icons-material";
+import { Accordion, AccordionDetails, AccordionSummary, Alert, Avatar, Box, Paper, Stack, Typography } from "@mui/material";
+import { EditRounded, ExpandMoreRounded } from "@mui/icons-material";
 import { Button, Chip } from "@/components/ui";
-import { Metric, SectionTitle } from "@/components/page-parts";
+import { SectionTitle } from "@/components/page-parts";
 import { archiveTokens as t } from "@/theme/gamdow-theme";
 import { useLibrary } from "../library-context";
 import { ProfileForm } from "../forms/profile-form";
@@ -22,7 +21,7 @@ export function ProfilePage() {
     <>
       <SectionTitle
         title="Your profile"
-        eyebrow="THE PERSON BEHIND THE ARCHIVE"
+        eyebrow="YOUR ACCOUNT"
         action={
           <Button
             variant="contained"
@@ -35,7 +34,7 @@ export function ProfilePage() {
       />
       <Paper
         sx={{
-          p: { xs: 3, md: 5 },
+          p: { xs: 2.5, md: 3.5 },
           position: "relative",
           overflow: "hidden",
           background:
@@ -49,7 +48,7 @@ export function ProfilePage() {
             right: 16,
             top: -30,
             fontFamily: t.display,
-            fontSize: { xs: 130, md: 240 },
+            fontSize: { xs: 90, md: 170 },
             fontWeight: 700,
             color: "#d3fc7208",
             pointerEvents: "none",
@@ -66,8 +65,8 @@ export function ProfilePage() {
             src={profile.avatarImage || undefined}
             alt={profile.displayName}
             sx={{
-              width: 120,
-              height: 120,
+              width: { xs: 82, sm: 100 },
+              height: { xs: 82, sm: 100 },
               fontFamily: t.display,
               fontSize: 40,
               bgcolor: "#d3fc7214",
@@ -79,9 +78,6 @@ export function ProfilePage() {
             {profile.displayName.slice(0, 2).toUpperCase()}
           </Avatar>
           <Box sx={{ minWidth: 0, overflowWrap: "anywhere" }}>
-            <Typography variant="overline" color="primary.main">
-              INDEPENDENT CURATOR / GAM DOW
-            </Typography>
             <Typography variant="h2" sx={{ mt: 1 }}>
               {profile.displayName}
             </Typography>
@@ -90,12 +86,7 @@ export function ProfilePage() {
                 @{profile.username.replace(/^@/, "")}
               </Typography>
             )}
-            <Typography
-              color="text.secondary"
-              sx={{ mt: 2, whiteSpace: "pre-wrap", maxWidth: 650 }}
-            >
-              {profile.bio || "Every game leaves a story. Tell yours here."}
-            </Typography>
+            {profile.bio && <Typography color="text.secondary" sx={{ mt: 1.5, whiteSpace: "pre-wrap", maxWidth: 650 }}>{profile.bio}</Typography>}
             {profile.location && (
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                 {profile.location}
@@ -117,34 +108,23 @@ export function ProfilePage() {
           </Box>
         </Stack>
       </Paper>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "minmax(0,1fr) minmax(0,1fr)",
-            md: "repeat(4,minmax(0,1fr))",
-          },
-          gap: 2,
-          my: 3,
-        }}
-      >
-        <Metric value={data.games.length} label="Games collected" />
-        <Metric
-          value={data.games.filter((g) => g.status === "Completed").length}
-          label="Stories finished"
-        />
-        <Metric
-          value={data.games.filter((g) => g.review?.trim()).length}
-          label="Reviews written"
-        />
-        <Metric value={data.gallery.length} label="Memories captured" />
-      </Box>
-      <SteamConnectionPanel />
-      <SteamProfilePanel />
-      <EpicConnectionPanel />
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <SocialLogin linkGoogle disabled={hasUnsavedChanges} />
-      </Paper>
+      <Accordion sx={{ mb: 3 }}>
+        <AccordionSummary expandIcon={<ExpandMoreRounded />}>
+          <Box>
+            <Typography sx={{ fontWeight: 700 }}>Connected accounts</Typography>
+            <Typography variant="body2" color="text.secondary">Steam, Epic and Google sign-in</Typography>
+          </Box>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Stack spacing={2}>
+            <SteamConnectionPanel />
+            <EpicConnectionPanel />
+            <Paper sx={{ p: 2 }}>
+              <SocialLogin linkGoogle disabled={hasUnsavedChanges} />
+            </Paper>
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
       <Paper sx={{ p: 3 }}>
         <Stack
           direction={{ xs: "column", sm: "row" }}

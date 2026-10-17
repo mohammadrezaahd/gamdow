@@ -15,17 +15,18 @@ import {
   TextField,
 } from "@/components/ui";
 import { useState } from "react";
-import { Box, Divider, Paper, Stack, Typography } from "@mui/material";
+import { Accordion, AccordionDetails, AccordionSummary, Box, Divider, Paper, Stack, Typography } from "@mui/material";
 import {
   ArrowBackRounded,
   DeleteOutlineRounded,
   EditRounded,
   FavoriteBorderRounded,
   FavoriteRounded,
+  ExpandMoreRounded,
 } from "@mui/icons-material";
 import type { Game, JournalEntry } from "@/types/game";
 import { GameImage } from "@/components/game-image";
-import { ConfirmDialog, EmptyState } from "@/components/page-parts";
+import { ConfirmDialog } from "@/components/page-parts";
 import { statuses } from "@/services/library-repository";
 import { newId, today, useLibrary } from "./library-context";
 import { ReviewForm } from "./forms/review-form";
@@ -85,7 +86,7 @@ export function GameDetail({
         sx={{
           overflow: "hidden",
           position: "relative",
-          minHeight: 340,
+          minHeight: { xs: 250, sm: 300, md: 340 },
           display: "flex",
           alignItems: "end",
           p: { xs: 2.5, md: 4 },
@@ -156,7 +157,7 @@ export function GameDetail({
                   .join(" · ")}
               </Typography>
             </Stack>
-            <Typography variant="h2" sx={{ mt: 1 }}>
+            <Typography variant="h2" sx={{ mt: 1, fontSize: { xs: "2rem", sm: "2.75rem", md: "3.5rem" }, lineHeight: 1.05, overflowWrap: "anywhere" }}>
               {visibleMetadata?.name || game.title}
             </Typography>
             <Stack
@@ -203,97 +204,45 @@ export function GameDetail({
           <Tab label="Journal" />
         </Tabs>
         {tab === 0 && (
-          <Stack spacing={3}>
-            <Typography color="text.secondary">
-              {visibleMetadata?.description ||
-                game.description ||
-                "Add a description to make this page yours."}
-            </Typography>
-            <Box>
-              <Typography variant="overline" color="text.secondary">
-                TAGS / ALTERNATE NAMES
+          <Stack spacing={{ xs: 2.5, md: 3 }}>
+            {(visibleMetadata?.description || game.description) && (
+              <Typography color="text.secondary" sx={{ maxWidth: 820, lineHeight: 1.8 }}>
+                {visibleMetadata?.description || game.description}
               </Typography>
-              <Stack
-                direction="row"
-                useFlexGap
-                sx={{ flexWrap: "wrap", gap: 1, mt: 1 }}
-              >
-                {game.tags.map((tag) => (
-                  <Chip key={tag} label={tag} sx={{ maxWidth: "100%" }} />
-                ))}
-                {!game.tags.length && (
-                  <Typography variant="body2" color="text.secondary">
-                    Add tags or alternate names from Edit game.
-                  </Typography>
-                )}
-              </Stack>
-            </Box>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  sm: "repeat(2,minmax(0,1fr))",
-                  lg: "repeat(4,minmax(0,1fr))",
-                },
-                gap: 2,
-              }}
-            >
+            )}
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", sm: "repeat(2,minmax(0,1fr))", lg: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}>
               <TextField
-                select
-                label="Status"
-                value={game.status}
-                onChange={(e) =>
-                  saveGame({
-                    ...game,
-                    status: e.target.value as Game["status"],
-                  })
-                }
+                select label="Status" value={game.status}
+                onChange={(e) => saveGame({ ...game, status: e.target.value as Game["status"] })}
               >
-                {statuses.map((s) => (
-                  <MenuItem key={s} value={s}>
-                    {s}
-                  </MenuItem>
-                ))}
+                {statuses.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
               </TextField>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="caption">Play plan</Typography>
-                <Typography>
-                  {game.plan}
-                  {game.plannedAt ? ` · ${game.plannedAt}` : ""}
-                </Typography>
-              </Paper>
               <PlaytimeControl game={game} />
               <ProgressControl game={game} />
             </Box>
-            <GameProgressHistory
-              game={game}
-              compact
-              onOpenJournal={() => setTab(3)}
-            />
-            <Typography color="text.secondary">
-              Started: {game.startedAt || "Not recorded"} · Finished:{" "}
-              {game.completedAt || "Not recorded"}
-            </Typography>
-            {game.planNote && <Typography>{game.planNote}</Typography>}
-            <Typography>Series: {game.series || "No series"}</Typography>
-            <Stack
-              direction="row"
-              spacing={1}
-              useFlexGap
-              sx={{ flexWrap: "wrap" }}
-            >
-              {data.collections
-                .filter((c) => c.gameIds.includes(game.id))
-                .map((c) => (
-                  <Chip key={c.id} label={c.name} />
-                ))}
+            <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1, alignItems: "center" }}>
+              {game.startedAt && <Chip size="small" label={`Started ${game.startedAt}`} />}
+              {game.completedAt && <Chip size="small" label={`Finished ${game.completedAt}`} />}
+              {game.plan && <Chip size="small" label={game.planNote ? `${game.plan} · ${game.planNote}` : game.plan} />}
+              {game.series && <Chip size="small" label={game.series} />}
+              {data.collections.filter((c) => c.gameIds.includes(game.id)).map((c) => <Chip key={c.id} size="small" label={c.name} />)}
+              {game.tags.map((tag) => <Chip key={tag} size="small" label={tag} />)}
             </Stack>
-            <Box>
-              <Button variant="outlined" onClick={onEdit}>
-                Manage details & collections
-              </Button>
-            </Box>
-
+            <GameProgressHistory game={game} compact onOpenJournal={() => setTab(3)} />
+            <Accordion disableGutters sx={{ border: 1, borderColor: "divider", borderRadius: "8px !important", overflow: "hidden", "&::before": { display: "none" } }}>
+              <AccordionSummary expandIcon={<ExpandMoreRounded />}>
+                <Box>
+                  <Typography sx={{ fontWeight: 700 }}>{game.steamAppId ? "Steam details" : "Connect this game to Steam"}</Typography>
+                  <Typography variant="body2" color="text.secondary">{game.steamAppId ? "Play, achievements and store links" : "Find this game in the Steam catalog"}</Typography>
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails sx={{ p: { xs: 1.25, md: 2 } }}>
+                <SteamGamePanel game={game} onMetadata={setSteamMetadata} />
+              </AccordionDetails>
+            </Accordion>
+            <Button variant="outlined" onClick={onEdit} sx={{ alignSelf: "flex-start" }}>
+              Edit game details
+            </Button>
           </Stack>
         )}
         {tab === 1 && (
@@ -352,55 +301,30 @@ export function GameDetail({
         )}
         {tab === 2 && <GalleryPage gameId={game.id} onGame={onGame} />}
         {tab === 3 && (
-          <Stack spacing={2}>
+          <Stack spacing={{ xs: 2, md: 3 }}>
+            <Box>
+              <Typography variant="h5">Your play history</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: .5 }}>
+                Status, playtime and progress changes, grouped by day.
+              </Typography>
+            </Box>
             <GameProgressHistory game={game} />
-            <Divider />
-            <Box
-              component="form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!entry.text.trim()) return;
-                saveGame({
-                  ...game,
-                  journalEntries: [
-                    ...game.journalEntries.filter((j) => j.id !== entry.id),
-                    { ...entry, text: entry.text.trim() },
-                  ].sort((a, b) => b.date.localeCompare(a.date)),
-                });
-                resetEntry();
-              }}
-            >
+            <Paper component="form" variant="outlined" onSubmit={(e) => {
+              e.preventDefault();
+              if (!entry.text.trim()) return;
+              saveGame({ ...game, journalEntries: [...game.journalEntries.filter((j) => j.id !== entry.id), { ...entry, text: entry.text.trim() }].sort((a, b) => b.date.localeCompare(a.date)) });
+              resetEntry();
+            }} sx={{ p: { xs: 2, md: 2.5 } }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>{game.journalEntries.some((j) => j.id === entry.id) ? "Edit a note" : "Add a note"}</Typography>
               <Stack spacing={2}>
-                <DateField
-                  label="Entry date"
-                  required
-                  value={entry.date}
-                  onValueChange={(value) =>
-                    setEntry((j) => ({ ...j, date: value }))
-                  }
-                />
-                <TextField
-                  label="A note from your journey"
-                  required
-                  multiline
-                  minRows={3}
-                  value={entry.text}
-                  onChange={(e) =>
-                    setEntry((j) => ({ ...j, text: e.target.value }))
-                  }
-                />
+                <DateField label="Date" required value={entry.date} onValueChange={(value) => setEntry((j) => ({ ...j, date: value }))} />
+                <TextField label="A quick note" placeholder="What happened in this session?" required multiline minRows={2} value={entry.text} onChange={(e) => setEntry((j) => ({ ...j, text: e.target.value }))} />
                 <Stack direction="row" spacing={1}>
-                  <Button type="submit" variant="contained">
-                    {game.journalEntries.some((j) => j.id === entry.id)
-                      ? "Update entry"
-                      : "Add entry"}
-                  </Button>
-                  {game.journalEntries.some((j) => j.id === entry.id) && (
-                    <Button onClick={resetEntry}>Cancel edit</Button>
-                  )}
+                  <Button type="submit" variant="contained">{game.journalEntries.some((j) => j.id === entry.id) ? "Save note" : "Add note"}</Button>
+                  {game.journalEntries.some((j) => j.id === entry.id) && <Button onClick={resetEntry}>Cancel</Button>}
                 </Stack>
               </Stack>
-            </Box>
+            </Paper>
             <Divider />
             {game.journalEntries.length ? (
               game.journalEntries.map((j) => (
@@ -435,15 +359,11 @@ export function GameDetail({
                 </Paper>
               ))
             ) : (
-              <EmptyState
-                title="Your journal starts here"
-                description="Keep track of discoveries, milestones and thoughts along the way."
-              />
+              <Typography color="text.secondary">Your notes will appear here.</Typography>
             )}
           </Stack>
         )}
       </Paper>
-      <SteamGamePanel game={game} onMetadata={setSteamMetadata} />
       {review && <ReviewForm game={game} onClose={() => setReview(false)} />}
       {remove && (
         <ConfirmDialog
