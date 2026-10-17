@@ -99,12 +99,12 @@ function JourneySummary({ game }: { game: Game }) {
 
 function ProgressChart({ days }: { days: DayActivity[] }) {
   const records = [...days].reverse();
-  const width = 640;
-  const height = 144;
-  const left = 38;
-  const right = 10;
-  const top = 12;
-  const bottom = 24;
+  const width = 500;
+  const height = 112;
+  const left = 34;
+  const right = 8;
+  const top = 10;
+  const bottom = 20;
   const plotWidth = width - left - right;
   const plotHeight = height - top - bottom;
   const maxMinutes = Math.max(60, ...records.map((day) => day.minutesPlayed));
@@ -124,7 +124,7 @@ function ProgressChart({ days }: { days: DayActivity[] }) {
     : [...new Set([0, Math.floor((records.length - 1) / 2), records.length - 1])];
 
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, overflow: "hidden" }}>
+    <Paper variant="outlined" sx={{ p: 1.5, width: "100%", maxWidth: 480, alignSelf: "flex-start", overflow: "hidden" }}>
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Play &amp; progress</Typography>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
@@ -139,12 +139,12 @@ function ProgressChart({ days }: { days: DayActivity[] }) {
         </Stack>
       </Stack>
       {!records.length ? (
-        <Box sx={{ height: 84, display: "grid", placeItems: "center", color: "text.secondary" }}>
+        <Box sx={{ height: 64, display: "grid", placeItems: "center", color: "text.secondary" }}>
           <Typography variant="body2">Your chart will take shape as you log playtime or progress.</Typography>
         </Box>
       ) : (
         <Box sx={{ width: "100%", overflowX: "auto", overflowY: "hidden" }}>
-          <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minWidth: 500 }} role="img" aria-label="Daily playtime bars and progress trend">
+          <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minWidth: 360 }} role="img" aria-label="Daily playtime bars and progress trend">
             {[0, 50, 100].map((value) => (
               <g key={value}>
                 <line x1={left} x2={width - right} y1={y(value)} y2={y(value)} stroke="currentColor" opacity={value === 0 ? .2 : .08} />
