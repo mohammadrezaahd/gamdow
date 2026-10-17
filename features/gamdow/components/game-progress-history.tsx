@@ -124,7 +124,7 @@ function ProgressChart({ days }: { days: DayActivity[] }) {
     : [...new Set([0, Math.floor((records.length - 1) / 2), records.length - 1])];
 
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, width: "100%", maxWidth: 480, overflow: "hidden" }}>
+    <Paper variant="outlined" sx={{ p: 1.5, width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Play &amp; progress</Typography>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
@@ -139,12 +139,12 @@ function ProgressChart({ days }: { days: DayActivity[] }) {
         </Stack>
       </Stack>
       {!records.length ? (
-        <Box sx={{ height: 64, display: "grid", placeItems: "center", color: "text.secondary" }}>
+        <Box sx={{ flex: 1, minHeight: 64, display: "grid", placeItems: "center", color: "text.secondary" }}>
           <Typography variant="body2">Your chart will take shape as you log playtime or progress.</Typography>
         </Box>
       ) : (
-        <Box sx={{ width: "100%", overflowX: "auto", overflowY: "hidden" }}>
-          <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ minWidth: 360 }} role="img" aria-label="Daily playtime bars and progress trend">
+        <Box sx={{ width: "100%", flex: 1, minHeight: 112, display: "flex", overflowX: "auto", overflowY: "hidden" }}>
+          <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" preserveAspectRatio="none" style={{ minWidth: 360, flex: "1 1 auto" }} role="img" aria-label="Daily playtime bars and progress trend">
             {[0, 50, 100].map((value) => (
               <g key={value}>
                 <line x1={left} x2={width - right} y1={y(value)} y2={y(value)} stroke="currentColor" opacity={value === 0 ? .2 : .08} />
