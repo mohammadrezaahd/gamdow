@@ -144,7 +144,7 @@ function ProgressChart({ days }: { days: DayActivity[] }) {
         </Box>
       ) : (
         <Box sx={{ width: "100%", flex: 1, minHeight: 112, display: "flex", overflowX: "auto", overflowY: "hidden" }}>
-          <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" preserveAspectRatio="none" style={{ minWidth: 360, flex: "1 1 auto" }} role="img" aria-label="Daily playtime bars and progress trend">
+          <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style={{ minWidth: 360, flex: "1 1 auto" }} role="img" aria-label="Daily playtime bars and progress trend">
             {[0, 50, 100].map((value) => (
               <g key={value}>
                 <line x1={left} x2={width - right} y1={y(value)} y2={y(value)} stroke="currentColor" opacity={value === 0 ? .2 : .08} />
