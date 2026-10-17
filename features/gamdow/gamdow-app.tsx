@@ -46,7 +46,7 @@ function readRoute(): Route {
     }
   }
   return {
-    page: navigation.some((n) => n.page === page) ? page : "dashboard",
+    page: page === "statistics" || navigation.some((n) => n.page === page) ? page : "dashboard",
     gameId: p.get("game") ?? undefined,
     tab: Math.min(3, Math.max(0, Number(p.get("tab")) || 0)),
     search: p.get("q") ?? "",

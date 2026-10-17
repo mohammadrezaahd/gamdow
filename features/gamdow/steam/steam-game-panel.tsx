@@ -126,12 +126,7 @@ export function SteamGamePanel({
           spacing={2}
           sx={{ justifyContent: "space-between" }}
         >
-          <Box>
-            <Typography variant="overline" color="primary.main">
-              STEAM / {game.steamAppId}
-            </Typography>
-            <Typography variant="h5">Beyond your play journal</Typography>
-          </Box>
+          <Typography variant="h5">Steam account</Typography>
           <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 1 }}>
             {details?.ownership?.state === "owned" && (
               <Button
@@ -203,14 +198,6 @@ export function SteamGamePanel({
             }
           >
             {error}
-          </Alert>
-        )}
-        {details?.warning && (
-          <Alert severity="warning">{details.warning}</Alert>
-        )}
-        {details?.metadataStale && (
-          <Alert severity="info">
-            Showing cached Steam metadata. The latest refresh was unavailable.
           </Alert>
         )}
         <Box
@@ -288,21 +275,10 @@ export function SteamGamePanel({
                 <Chip size="small" key={c.id} label={c.name} />
               ))}
             </Stack>
-            <Typography variant="caption" color="text.secondary">
-              Metadata synced · {new Date(m.steamLastSyncAt).toLocaleString()}
-            </Typography>
           </Stack>
         )}
-        {details?.playtime?.lastSyncAt && (
-          <Typography variant="caption" color="text.secondary">
-            Playtime synced ·{" "}
-            {new Date(details.playtime.lastSyncAt).toLocaleString()}
-          </Typography>
-        )}
         {a?.message && (
-          <Alert severity={a.state === "private" ? "warning" : "info"}>
-            {a.message}
-          </Alert>
+          <Typography variant="body2" color="text.secondary">{a.message}</Typography>
         )}
         {a?.state === "available" && (
           <Box>
