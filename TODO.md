@@ -1,7 +1,9 @@
-# Landing page outcomes
+# Statistics page outcomes
 
-- [x] Public visitor experience — “Now i want a landing page. It should be really creative. with 3D elements. animations and scroll triggers. Content should present website well.” Signed-out visitors get the public landing screen at `/`; signed-in visitors retain the existing archive/dashboard at `/`.
-- [x] Product introduction — “Content should present website well. like what user can do or even can connect to steam and epic games and whatever.” The page introduces the library, play tracking, journal/progress, reviews/gallery, collections/planning, and clearly qualified Steam/Epic connection capabilities.
-- [x] Creative visual treatment — “It should be really creative. with 3D elements.” The page uses custom Gamdow-aligned 3D art, layered CSS depth, archive motifs, and the existing brand typography and chartreuse accent.
-- [x] Motion and accessibility — “animations and scroll triggers.” Scroll-revealed sections and restrained ambient motion are present; `prefers-reduced-motion` is honored, including native footer navigation.
-- [x] Responsive and usable landing page — Sections, art, navigation, and `/register` and `/login` actions adapt across mobile/tablet/desktop widths; the keyboard and reduced-motion review found no remaining actionable issue.
+- [x] Keep Statistics visible for now: “for now please show stastics I will tell you when you should remove it from dashboard.” It remains selectable in desktop navigation and the mobile More menu; it has not been removed or hidden.
+- [x] Complete user-play coverage: “I want to make sure I have every data from user. How much they play. when they play.what they play.” Show current library state, complete retained event history, clear scope counts, and usable library filters.
+- [x] Monthly and daily data: “monthly data. ... daily data. ... all data should be chart and table. seperate from each other and in order.” Present separate playtime/progress charts and full tables for the chosen local-date range, including zero-activity calendar periods, with custom historical windows.
+- [x] Genre data: “generes data ... all data should be chart and table. seperate from each other and in order.” Show genre distribution in its own chart and separate table with available playtime, events, represented games, and active-day measures.
+- [x] Game and other library data: “games data. all data should be chart and table. seperate from each other and in order.” Show game activity/current totals in a chart and a separate complete game table, plus chart/table breakdowns for platforms, sources, and statuses.
+- [x] Dedicated Log: “even have a part named log and put every log stuff on that part.” Provide a clearly titled Log with retained event details, filters, exact count, and keyset pagination rather than silently truncating the feed.
+- [x] Preserve accurate data meaning: separate current totals from recorded activity; group dates using the viewer’s time zone; do not count baseline snapshots as play sessions; label Steam playtime as recorded/synced activity and show Steam’s provider-reported last-played timestamp separately.

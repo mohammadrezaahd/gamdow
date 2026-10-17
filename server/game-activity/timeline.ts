@@ -2,10 +2,14 @@ import "server-only";
 import { Buffer } from "node:buffer";
 import { database, type AccountDocument } from "../database";
 import { HttpError } from "../http";
+import type { Game } from "@/types/game";
 import type { GameActivityEvent, GameTimelinePage } from "@/types/game-activity";
 import type { GameActivityEventDocument } from "./models";
 
 const PAGE_SIZE = 30;
+const LEGACY_BASELINE_CACHE_MS = 10 * 60 * 1000;
+const legacyBaselineCache = new Map<string, number>();
+const legacyBaselineInFlight = new Map<string, Promise<void>>();
 
 const publicEvent = ({
   _id: _ignored,
@@ -114,6 +118,85 @@ async function ensureLegacyBaseline(
     await db.gameActivityEvents.insertOne(baseline);
   } catch (error) {
     if ((error as { code?: number }).code !== 11000) throw error;
+  }
+}
+
+/** Initialize old games in small idempotent batches before archive-wide reads. */
+export async function ensureLegacyBaselines(
+  account: Pick<AccountDocument, "_id" | "revision">,
+  games: Game[],
+) {
+  const cacheKey = `${account._id}:${account.revision}`;
+  const now = Date.now();
+  const initializedAt = legacyBaselineCache.get(cacheKey);
+  if (initializedAt && now - initializedAt < LEGACY_BASELINE_CACHE_MS) return;
+  const active = legacyBaselineInFlight.get(cacheKey);
+  if (active) return active;
+
+  const initialization = (async () => {
+    const db = await database();
+    const batchSize = 100;
+    const existingIds = new Set(
+      (await db.gameActivityEvents.distinct("gameId", {
+        userId: account._id,
+      })) as string[],
+    );
+    for (let offset = 0; offset < games.length; offset += batchSize) {
+      const batch = games.slice(offset, offset + batchSize);
+      const recordedAt = new Date().toISOString();
+      const missing = batch.filter((game) => !existingIds.has(game.id));
+      if (!missing.length) continue;
+      try {
+        await db.gameActivityEvents.bulkWrite(
+          missing.map((game) => {
+            const id = `baseline:${account._id}:${game.id}:v1`;
+            const baseline: GameActivityEventDocument = {
+              _id: id,
+              id,
+              userId: account._id,
+              gameId: game.id,
+              type: "BASELINE",
+              source: "SYSTEM",
+              occurredAt: game.updatedAt,
+              recordedAt,
+              toStatus: game.status,
+              totalMinutes:
+                game.hoursPlayed === undefined
+                  ? undefined
+                  : Math.round(game.hoursPlayed * 60),
+              note: "Current state when timeline tracking was enabled",
+            };
+            return {
+              updateOne: {
+                filter: { _id: id, userId: account._id },
+                update: { $setOnInsert: baseline },
+                upsert: true,
+              },
+            };
+          }),
+          { ordered: false },
+        );
+      } catch (error) {
+        const writeErrors = (error as { writeErrors?: { code: number }[] }).writeErrors;
+        if (
+          (error as { code?: number }).code !== 11000 &&
+          (!writeErrors?.length || writeErrors.some((writeError) => writeError.code !== 11000))
+        )
+          throw error;
+      }
+    }
+    legacyBaselineCache.set(cacheKey, Date.now());
+    if (legacyBaselineCache.size > 512) {
+      const oldest = legacyBaselineCache.keys().next().value;
+      if (oldest !== undefined) legacyBaselineCache.delete(oldest);
+    }
+  })();
+  legacyBaselineInFlight.set(cacheKey, initialization);
+  try {
+    await initialization;
+  } finally {
+    if (legacyBaselineInFlight.get(cacheKey) === initialization)
+      legacyBaselineInFlight.delete(cacheKey);
   }
 }
 

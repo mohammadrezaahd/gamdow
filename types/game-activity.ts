@@ -93,6 +93,7 @@ export interface ActivityGameSummary {
   activeDays: number;
   firstActivityAt?: string;
   lastActivityAt?: string;
+  steamLastPlayedAt?: string;
 }
 
 export interface ActivityBreakdown {
@@ -108,6 +109,7 @@ export interface ActivityWeekdaySummary {
   weekday: number;
   label: string;
   minutes: number;
+  minutesChanged: number;
   events: number;
   activeDays: number;
 }
@@ -122,6 +124,16 @@ export interface ActivityStatisticsQuery {
   status?: GameStatus;
   source?: GameActivitySource;
   favorite?: boolean;
+  timeZone?: string;
+  fromDate?: string;
+  toDate?: string;
+}
+
+export interface ActivityLogPage {
+  items: ActivityFeedItem[];
+  total?: number;
+  limit: number;
+  nextCursor?: string;
 }
 
 export interface ActivityStatisticsAvailableFilters {
@@ -133,11 +145,16 @@ export interface ActivityStatisticsAvailableFilters {
 
 export interface ActivityStatistics {
   generatedAt: string;
+  timeZone: string;
+  fromDate: string;
+  toDate: string;
   availableFilters: ActivityStatisticsAvailableFilters;
   totalGames: number;
   trackedGames: number;
   totalMinutes: number;
   totalEvents: number;
+  windowEvents: number;
+  baselineRecords: number;
   activeDays: number;
   playDays: number;
   statusChanges: number;
@@ -151,5 +168,4 @@ export interface ActivityStatistics {
   statuses: ActivityBreakdown[];
   weekdays: ActivityWeekdaySummary[];
   games: ActivityGameSummary[];
-  activities: ActivityFeedItem[];
 }

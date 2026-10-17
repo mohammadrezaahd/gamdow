@@ -29,6 +29,7 @@ import {
   SettingsRounded,
   PersonOutlineRounded,
   ViewTimelineRounded,
+  QueryStatsRounded,
   CloseRounded,
   NorthEastRounded,
 } from "@mui/icons-material";
@@ -54,6 +55,7 @@ export const navigation: { page: AppPage; label: string; icon: ReactNode }[] = [
   },
   { page: "reviews", label: "Reviews", icon: <MenuBookRounded /> },
   { page: "gallery", label: "Gallery", icon: <AutoAwesomeRounded /> },
+  { page: "statistics", label: "Statistics", icon: <QueryStatsRounded /> },
   { page: "profile", label: "Profile", icon: <PersonOutlineRounded /> },
   { page: "settings", label: "Settings", icon: <SettingsRounded /> },
 ];

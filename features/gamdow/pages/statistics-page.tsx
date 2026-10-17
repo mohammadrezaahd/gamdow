@@ -1,192 +1,121 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
   CircularProgress,
+  LinearProgress,
   Paper,
   Stack,
   Typography,
 } from "@mui/material";
 import { RefreshRounded } from "@mui/icons-material";
-import {
-  Button,
-  Chip,
-  MenuItem,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-} from "@/components/ui";
+import { Button, Chip, MenuItem, TextField } from "@/components/ui";
 import { EmptyState, Metric, SectionTitle } from "@/components/page-parts";
 import { statisticsRepository } from "@/services/statistics-repository";
 import { SteamProfilePanel } from "../steam/steam-profile-panel";
 import type {
-  ActivityBreakdown,
-  ActivityPeriodSummary,
+  ActivityLogPage,
   ActivityStatistics,
   ActivityStatisticsQuery,
 } from "@/types/game-activity";
+import type { GameStatus } from "@/types/game";
+import type { GameActivitySource } from "@/types/game-activity";
+import {
+  ActivityLogTable,
+  BreakdownAnalysis,
+  GameAnalysis,
+  PeriodAnalysis,
+  WeekdayAnalysis,
+} from "./statistics/analytics-sections";
+
+type Filters = Omit<ActivityStatisticsQuery, "timeZone" | "fromDate" | "toDate">;
+type FilterKey = keyof Filters;
+
+const DAY_MS = 86_400_000;
 
 const formatMinutes = (minutes: number) => {
-  const absolute = Math.abs(Math.round(minutes));
-  const hours = Math.floor(absolute / 60);
-  const rest = absolute % 60;
-  const value = [hours ? `${hours}h` : "", rest ? `${rest}m` : ""]
+  const value = Math.abs(Math.round(minutes));
+  const hours = Math.floor(value / 60);
+  const rest = value % 60;
+  const duration = [hours ? `${hours}h` : "", rest ? `${rest}m` : ""]
     .filter(Boolean)
     .join(" ");
-  return `${minutes < 0 ? "−" : minutes > 0 ? "+" : ""}${value || "0m"}`;
+  return `${minutes < 0 ? "−" : minutes > 0 ? "+" : ""}${duration || "0m"}`;
 };
 
-const formatProgress = (value: number) => {
-  const rounded = Math.round(Math.abs(value) * 10) / 10;
-  return `${value < 0 ? "−" : value > 0 ? "+" : ""}${rounded} pts`;
-};
-
-const periodLabel = (period: string, short = false) => {
-  if (/^\d{4}-\d{2}$/.test(period)) {
-    const [year, month] = period.split("-").map(Number);
-    return new Intl.DateTimeFormat(undefined, {
-      month: short ? "short" : "long",
-      ...(short ? {} : { year: "numeric" }),
-    }).format(new Date(year, month - 1, 1));
-  }
-  return new Intl.DateTimeFormat(undefined, short
-    ? { month: "short", day: "numeric" }
-    : { dateStyle: "medium" }
-  ).format(new Date(`${period}T12:00:00`));
-};
-
-function ActivityChart({ rows }: { rows: ActivityPeriodSummary[] }) {
-  const chronological = [...rows].reverse();
-  const max = Math.max(1, ...chronological.map((row) => Math.max(row.minutesGained, row.progressGained)));
-  if (!rows.length)
-    return (
-      <Box sx={{ py: 5, textAlign: "center" }}>
-        <Typography color="text.secondary">No recorded activity in this period.</Typography>
-      </Box>
-    );
-
-  return (
-    <Box sx={{ overflowX: "auto", pb: 1 }}>
-      <Box sx={{ display: "flex", alignItems: "flex-end", gap: 1.5, minWidth: Math.max(chronological.length * 52, 420), height: 190, px: 1 }}>
-        {chronological.map((row) => (
-          <Box key={row.period} title={`${periodLabel(row.period)} · ${formatMinutes(row.minutesGained)} playtime · ${formatProgress(row.progressGained)} progress`} sx={{ width: 38, flex: "0 0 38px", textAlign: "center" }}>
-            <Stack direction="row" spacing={0.5} sx={{ height: 140, alignItems: "flex-end", justifyContent: "center" }}>
-              <Box sx={{ width: 13, height: row.minutesGained ? Math.max(7, (row.minutesGained / max) * 125) : 2, borderRadius: "5px 5px 2px 2px", bgcolor: "primary.main" }} />
-              <Box sx={{ width: 13, height: row.progressGained ? Math.max(7, (row.progressGained / max) * 125) : 2, borderRadius: "5px 5px 2px 2px", bgcolor: "secondary.main" }} />
-            </Stack>
-            <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1, whiteSpace: "nowrap" }}>
-              {periodLabel(row.period, true)}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-    </Box>
-  );
+function localDate(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
-function Breakdown({ title, rows, value = "minutes" }: { title: string; rows: ActivityBreakdown[]; value?: "minutes" | "games" }) {
-  const visible = rows.slice(0, 8);
-  const max = Math.max(1, ...visible.map((row) => value === "minutes" ? row.minutes : row.games));
-  return (
-    <Paper sx={{ p: { xs: 2, md: 2.5 }, height: "100%" }}>
-      <Typography variant="h6">{title}</Typography>
-      <Typography variant="caption" color="text.secondary">
-        {value === "minutes" ? "Based on recorded playtime." : "Games currently in this group."}
-      </Typography>
-      <Stack spacing={1.25} sx={{ mt: 2 }}>
-        {visible.length ? visible.map((row) => {
-          const amount = value === "minutes" ? row.minutes : row.games;
-          return (
-            <Box key={row.key}>
-              <Stack direction="row" sx={{ justifyContent: "space-between", gap: 1, mb: 0.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>{row.label}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {value === "minutes" ? formatMinutes(row.minutes).replace("+", "") : `${row.games} games`}
-                </Typography>
-              </Stack>
-              <Box sx={{ height: 5, borderRadius: 99, bgcolor: "action.hover", overflow: "hidden" }}>
-                <Box sx={{ width: `${Math.max(2, (amount / max) * 100)}%`, height: "100%", bgcolor: "primary.main", borderRadius: 99 }} />
-              </Box>
-              <Typography variant="caption" color="text.secondary">
-                {row.events} events · {row.activeDays} active days
-              </Typography>
-            </Box>
-          );
-        }) : <Typography color="text.secondary">No data yet.</Typography>}
-      </Stack>
-    </Paper>
-  );
-}
-
-function WeekdayCard({ statistics }: { statistics: ActivityStatistics }) {
-  const max = Math.max(1, ...statistics.weekdays.map((row) => row.minutes));
-  return (
-    <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
-      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1 }}>
-        <Box>
-          <Typography variant="h6">When you play</Typography>
-          <Typography variant="caption" color="text.secondary">Playtime grouped by weekday.</Typography>
-        </Box>
-        <Chip size="small" label={`${statistics.playDays} play days`} />
-      </Stack>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: { xs: 0.5, sm: 1.25 }, alignItems: "end", height: 150, mt: 2 }}>
-        {statistics.weekdays.map((row) => (
-          <Box key={row.weekday} sx={{ textAlign: "center", minWidth: 0 }}>
-            <Box sx={{ height: 105, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-              <Box title={`${row.label}: ${formatMinutes(row.minutes)}`} sx={{ width: "min(24px,70%)", height: row.minutes ? `${Math.max(5, (row.minutes / max) * 100)}%` : 3, bgcolor: "primary.main", borderRadius: "5px 5px 2px 2px" }} />
-            </Box>
-            <Typography variant="caption" color="text.secondary">{row.label}</Typography>
-          </Box>
-        ))}
-      </Box>
-    </Paper>
-  );
-}
-
-function RecentActivity({ statistics }: { statistics: ActivityStatistics }) {
-  return (
-    <Paper sx={{ p: { xs: 2, md: 2.5 } }}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", gap: 1, mb: 1.5 }}>
-        <Box>
-          <Typography variant="h6">Recent activity</Typography>
-          <Typography variant="caption" color="text.secondary">The raw activity stream is retained for future year-end reports.</Typography>
-        </Box>
-        <Chip size="small" label={`${statistics.totalEvents} total events`} />
-      </Stack>
-      <Stack spacing={0.5} sx={{ maxHeight: 360, overflowY: "auto" }}>
-        {statistics.activities.slice(0, 40).map((event) => (
-          <Box key={event.id} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "140px minmax(150px,1fr) auto" }, gap: 1, alignItems: "center", py: 1, borderBottom: 1, borderColor: "divider" }}>
-            <Typography variant="caption" color="text.secondary">
-              {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(event.occurredAt))}
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>{event.gameTitle}</Typography>
-            <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: "wrap" }}>
-              <Chip size="small" label={event.type.replaceAll("_", " ").toLowerCase()} />
-              <Chip size="small" label={event.source} />
-              {event.deltaMinutes !== undefined && event.deltaMinutes !== 0 && <Chip size="small" label={formatMinutes(event.deltaMinutes)} />}
-              {event.progress !== undefined && <Chip size="small" label={`${event.progress}%`} />}
-            </Stack>
-          </Box>
-        ))}
-      </Stack>
-    </Paper>
-  );
+function shiftDate(day: string, amount: number) {
+  return new Date(Date.parse(`${day}T12:00:00.000Z`) + amount * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
 }
 
 export function StatisticsPage() {
   const [statistics, setStatistics] = useState<ActivityStatistics | null>(null);
+  const [logPage, setLogPage] = useState<ActivityLogPage | null>(null);
+  const [logTotal, setLogTotal] = useState<number | null>(null);
+  const logTotalRef = useRef<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [logLoading, setLogLoading] = useState(true);
   const [error, setError] = useState("");
-  const [period, setPeriod] = useState<"monthly" | "daily">("monthly");
-  const [filters, setFilters] = useState<ActivityStatisticsQuery>({});
+  const [logError, setLogError] = useState("");
+  const [timeZone, setTimeZone] = useState("");
+  const [reportFrom, setReportFrom] = useState("");
+  const [reportTo, setReportTo] = useState("");
+  const [filters, setFilters] = useState<Filters>({});
+  const [logCursors, setLogCursors] = useState<(string | undefined)[]>([undefined]);
   const [refresh, setRefresh] = useState(0);
+  const currentCursor = logCursors[logCursors.length - 1];
+  const filtersActive = Object.values(filters).some((value) => value !== undefined);
+  const rangeDays = reportFrom && reportTo
+    ? (Date.parse(`${reportTo}T12:00:00.000Z`) - Date.parse(`${reportFrom}T12:00:00.000Z`)) / DAY_MS + 1
+    : 0;
+  const dateRangeError = !reportFrom || !reportTo
+    ? "Choose a start and end date."
+    : reportTo < reportFrom
+      ? "The end date must be on or after the start date."
+      : rangeDays > 366
+        ? "Choose a date range of at most 366 days."
+        : "";
+
+  const refreshAll = () => {
+    logTotalRef.current = null;
+    setLogTotal(null);
+    setRefresh((value) => value + 1);
+  };
 
   useEffect(() => {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    const today = localDate(new Date(), zone);
+    setTimeZone(zone);
+    setReportTo(today);
+    setReportFrom(shiftDate(today, -89));
+  }, []);
+
+  useEffect(() => {
+    if (!timeZone || dateRangeError) {
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setLoading(true);
-    statisticsRepository.load(filters, controller.signal)
+    statisticsRepository
+      .load(
+        { ...filters, timeZone, fromDate: reportFrom, toDate: reportTo },
+        controller.signal,
+      )
       .then((result) => {
         if (!controller.signal.aborted) {
           setStatistics(result);
@@ -195,16 +124,43 @@ export function StatisticsPage() {
       })
       .catch((reason) => {
         if (!controller.signal.aborted)
-          setError(reason instanceof Error ? reason.message : "Could not load activity statistics.");
+          setError(reason instanceof Error ? reason.message : "Could not load activity analytics.");
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [filters, refresh]);
+  }, [filters, refresh, timeZone, reportFrom, reportTo, dateRangeError]);
 
   useEffect(() => {
-    const reload = () => setRefresh((value) => value + 1);
+    if (!timeZone) return;
+    const controller = new AbortController();
+    setLogPage(null);
+    setLogLoading(true);
+    statisticsRepository
+      .log(filters, currentCursor, controller.signal, 50, logTotalRef.current === null)
+      .then((result) => {
+        if (!controller.signal.aborted) {
+          setLogPage(result);
+          if (result.total !== undefined) {
+            logTotalRef.current = result.total;
+            setLogTotal(result.total);
+          }
+          setLogError("");
+        }
+      })
+      .catch((reason) => {
+        if (!controller.signal.aborted)
+          setLogError(reason instanceof Error ? reason.message : "Could not load the activity log.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLogLoading(false);
+      });
+    return () => controller.abort();
+  }, [filters, currentCursor, refresh, timeZone]);
+
+  useEffect(() => {
+    const reload = () => refreshAll();
     window.addEventListener("gamdow:steam-updated", reload);
     window.addEventListener("gamdow:storage-updated", reload);
     return () => {
@@ -213,124 +169,199 @@ export function StatisticsPage() {
     };
   }, []);
 
-  const rows = useMemo(
-    () => statistics ? (period === "monthly" ? statistics.monthly : statistics.daily) : [],
-    [statistics, period],
-  );
-  const setFilter = <K extends keyof ActivityStatisticsQuery>(key: K, value: ActivityStatisticsQuery[K] | undefined) =>
-    setFilters((existing) => ({ ...existing, [key]: value === undefined || value === "" ? undefined : value }));
-  const filtersActive = Object.values(filters).some((value) => value !== undefined);
+  const setFilter = <K extends FilterKey>(key: K, value: Filters[K] | undefined) => {
+    setFilters((existing) => ({
+      ...existing,
+      [key]: value === undefined || value === "" ? undefined : value,
+    }));
+    setLogCursors([undefined]);
+    logTotalRef.current = null;
+    setLogTotal(null);
+  };
+
+  const applyPreset = (days: number) => {
+    const today = localDate(new Date(), timeZone || "UTC");
+    setReportTo(today);
+    setReportFrom(shiftDate(today, -(days - 1)));
+  };
+
+  const clearFilters = () => {
+    setFilters({});
+    setLogCursors([undefined]);
+    logTotalRef.current = null;
+    setLogTotal(null);
+  };
+
+  const onLogNext = () => {
+    if (!logPage?.nextCursor) return;
+    setLogCursors((existing) => [...existing, logPage.nextCursor]);
+  };
+  const onLogPrevious = () => {
+    setLogCursors((existing) => (existing.length > 1 ? existing.slice(0, -1) : existing));
+  };
+  const currentRange = useMemo(() => {
+    if (!logPage || !logPage.items.length) return `${(logTotal ?? 0).toLocaleString()} events`;
+    const from = (logCursors.length - 1) * logPage.limit + 1;
+    const to = from + logPage.items.length - 1;
+    return logTotal === null
+      ? `${from.toLocaleString()}–${to.toLocaleString()} events`
+      : `${from.toLocaleString()}–${Math.min(to, logTotal).toLocaleString()} of ${logTotal.toLocaleString()} events`;
+  }, [logPage, logCursors.length, logTotal]);
 
   return (
     <>
       <SectionTitle
         title="Statistics"
-        eyebrow="ACTIVITY ARCHIVE / SUPPORT VIEW"
-        action={<Button variant="outlined" startIcon={<RefreshRounded />} disabled={loading} onClick={() => setRefresh((value) => value + 1)}>Refresh</Button>}
+        eyebrow="INTERNAL ANALYTICS / ACTIVITY ARCHIVE"
+        action={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshRounded />}
+            disabled={loading || logLoading}
+            onClick={refreshAll}
+          >
+            Refresh report
+          </Button>
+        }
       />
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
-      <SteamProfilePanel />
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+        All historical periods are available through the date window; the Log always covers the full retained history.
+      </Typography>
+
+      {loading && statistics && <LinearProgress sx={{ mb: 2 }} aria-label="Refreshing statistics" />}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       {statistics && (
         <Paper sx={{ p: { xs: 2, md: 2.5 }, mb: 3 }}>
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(230px,1.2fr) repeat(5,minmax(120px,.7fr)) auto" }, gap: 1.25, alignItems: { lg: "center" } }}>
-            <Box>
-              <Typography variant="h6">Activity archive</Typography>
-              <Typography variant="caption" color="text.secondary">Filters affect the analytics below, while the underlying event archive remains append-only.</Typography>
+          <Stack spacing={2}>
+            <Stack direction={{ xs: "column", md: "row" }} sx={{ justifyContent: "space-between", alignItems: { md: "center" }, gap: 1 }}>
+              <Box>
+                <Typography variant="h6">Report filters</Typography>
+                <Typography variant="caption" color="text.secondary">Library filters apply to each analysis and the Log. Periods use {statistics.timeZone}.</Typography>
+              </Box>
+              {filtersActive && <Button size="small" onClick={clearFilters}>Clear library filters</Button>}
+            </Stack>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))", xl: "repeat(5,minmax(0,1fr))" }, gap: 1.25 }}>
+              <TextField select size="small" label="Genre" value={filters.genre ?? ""} onChange={(event) => setFilter("genre", event.target.value || undefined)}>
+                <MenuItem value="">All genres</MenuItem>
+                {statistics.availableFilters.genres.map((genre) => <MenuItem key={genre} value={genre}>{genre}</MenuItem>)}
+              </TextField>
+              <TextField select size="small" label="Platform" value={filters.platform ?? ""} onChange={(event) => setFilter("platform", event.target.value || undefined)}>
+                <MenuItem value="">All platforms</MenuItem>
+                {statistics.availableFilters.platforms.map((platform) => <MenuItem key={platform} value={platform}>{platform}</MenuItem>)}
+              </TextField>
+              <TextField select size="small" label="Status" value={filters.status ?? ""} onChange={(event) => setFilter("status", (event.target.value || undefined) as GameStatus | undefined)}>
+                <MenuItem value="">All statuses</MenuItem>
+                {statistics.availableFilters.statuses.map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
+              </TextField>
+              <TextField select size="small" label="Source" value={filters.source ?? ""} onChange={(event) => setFilter("source", (event.target.value || undefined) as GameActivitySource | undefined)}>
+                <MenuItem value="">All sources</MenuItem>
+                {statistics.availableFilters.sources.map((source) => <MenuItem key={source} value={source}>{source}</MenuItem>)}
+              </TextField>
+              <TextField select size="small" label="Favorite" value={filters.favorite === undefined ? "" : String(filters.favorite)} onChange={(event) => setFilter("favorite", event.target.value === "" ? undefined : event.target.value === "true")}>
+                <MenuItem value="">All games</MenuItem><MenuItem value="true">Favorites</MenuItem><MenuItem value="false">Not favorites</MenuItem>
+              </TextField>
             </Box>
-            <TextField select size="small" label="Genre" value={filters.genre ?? ""} onChange={(e) => setFilter("genre", e.target.value || undefined)}>
-              <MenuItem value="">All genres</MenuItem>
-              {statistics.availableFilters.genres.map((genre) => <MenuItem key={genre} value={genre}>{genre}</MenuItem>)}
-            </TextField>
-            <TextField select size="small" label="Platform" value={filters.platform ?? ""} onChange={(e) => setFilter("platform", e.target.value || undefined)}>
-              <MenuItem value="">All platforms</MenuItem>
-              {statistics.availableFilters.platforms.map((platform) => <MenuItem key={platform} value={platform}>{platform}</MenuItem>)}
-            </TextField>
-            <TextField select size="small" label="Status" value={filters.status ?? ""} onChange={(e) => setFilter("status", (e.target.value || undefined) as ActivityStatisticsQuery["status"])}>
-              <MenuItem value="">All statuses</MenuItem>
-              {statistics.availableFilters.statuses.map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}
-            </TextField>
-            <TextField select size="small" label="Source" value={filters.source ?? ""} onChange={(e) => setFilter("source", (e.target.value || undefined) as ActivityStatisticsQuery["source"])}>
-              <MenuItem value="">All sources</MenuItem>
-              {statistics.availableFilters.sources.map((source) => <MenuItem key={source} value={source}>{source}</MenuItem>)}
-            </TextField>
-            <TextField select size="small" label="Favorites" value={filters.favorite === undefined ? "" : String(filters.favorite)} onChange={(e) => setFilter("favorite", e.target.value === "" ? undefined : e.target.value === "true")}>
-              <MenuItem value="">All games</MenuItem>
-              <MenuItem value="true">Favorites</MenuItem>
-              <MenuItem value="false">Not favorites</MenuItem>
-            </TextField>
-            {filtersActive && <Button onClick={() => setFilters({})}>Clear</Button>}
-          </Box>
+            <Stack direction={{ xs: "column", md: "row" }} useFlexGap sx={{ alignItems: { md: "center" }, flexWrap: "wrap", gap: 1.25 }}>
+              <Typography variant="body2" sx={{ mr: 0.5 }}>Analytics date window · max 366 local days</Typography>
+              <TextField type="date" size="small" label="From" value={reportFrom} onChange={(event) => setReportFrom(event.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: { xs: "100%", sm: 170 } }} />
+              <TextField type="date" size="small" label="To" value={reportTo} onChange={(event) => setReportTo(event.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: { xs: "100%", sm: 170 } }} />
+              <Stack direction="row" useFlexGap sx={{ flexWrap: "wrap", gap: 0.5 }}>
+                <Button size="small" onClick={() => applyPreset(30)}>30 days</Button>
+                <Button size="small" onClick={() => applyPreset(90)}>90 days</Button>
+                <Button size="small" onClick={() => applyPreset(365)}>365 days</Button>
+              </Stack>
+            </Stack>
+            {dateRangeError && <Alert severity="warning">{dateRangeError} Choose an older window to inspect earlier dates.</Alert>}
+          </Stack>
         </Paper>
       )}
 
       {loading && !statistics ? (
         <Paper sx={{ p: 5, display: "grid", placeItems: "center" }}>
           <CircularProgress aria-label="Loading statistics" />
-          <Typography color="text.secondary" sx={{ mt: 2 }}>Building your activity report…</Typography>
+          <Typography color="text.secondary" sx={{ mt: 2 }}>Building the activity report…</Typography>
         </Paper>
       ) : !statistics ? (
-        <EmptyState title="Your story is just beginning" description="Add games and record progress or playtime to start the activity archive." />
-      ) : !statistics.totalGames ? (
-        <EmptyState title="No games match these filters" description="Clear one or more filters to see more of your activity." />
+        <EmptyState title="Statistics could not be loaded" description="Refresh the report or try again in a moment." />
       ) : (
-        <Stack spacing={3}>
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,minmax(0,1fr))", lg: "repeat(6,minmax(0,1fr))" }, gap: 2 }}>
-            <Metric value={formatMinutes(statistics.totalMinutes)} label="Total playtime" />
-            <Metric value={statistics.playDays} label="Play days" />
-            <Metric value={statistics.activeDays} label="Activity days" />
-            <Metric value={statistics.totalEvents} label="Tracked events" />
-            <Metric value={statistics.statusChanges} label="Status changes" />
-            <Metric value={statistics.progressUpdates} label="Progress updates" />
-          </Box>
-
-          <Paper sx={{ p: { xs: 2, md: 3 } }}>
-            <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 2, mb: 2 }}>
+        <Stack spacing={4}>
+          <Box component="section" aria-labelledby="coverage-title">
+            <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", alignItems: { sm: "end" }, mb: 1.5, gap: 1 }}>
               <Box>
-                <Typography variant="h5">Activity rhythm</Typography>
-                <Typography variant="body2" color="text.secondary">Playtime and progress changes recorded over time.</Typography>
+                <Typography id="coverage-title" variant="h5">Coverage</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Current library totals and retained Log counts are all-time. Activity metrics and period rows cover {statistics.fromDate} through {statistics.toDate} in {statistics.timeZone}.
+                </Typography>
               </Box>
-              <ToggleButtonGroup exclusive size="small" value={period} onChange={(_, value) => value && setPeriod(value)} aria-label="Activity period">
-                <ToggleButton value="monthly">Monthly</ToggleButton>
-                <ToggleButton value="daily">Daily</ToggleButton>
-              </ToggleButtonGroup>
+              <Chip size="small" label={`Calendar · ${statistics.timeZone}`} />
             </Stack>
-            <ActivityChart rows={rows} />
-          </Paper>
-
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "repeat(3,minmax(0,1fr))" }, gap: 2 }}>
-            <Breakdown title="Genres" rows={statistics.genres} />
-            <Breakdown title="Platforms" rows={statistics.platforms} />
-            <Breakdown title="Sources" rows={statistics.sources} value="games" />
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,minmax(0,1fr))", lg: "repeat(4,minmax(0,1fr))" }, gap: 1.5 }}>
+              <Metric value={statistics.totalGames.toLocaleString()} label="Games in scope" />
+              <Metric value={statistics.trackedGames.toLocaleString()} label="Games with playtime" />
+              <Metric value={formatMinutes(statistics.totalMinutes).replace(/^\+/, "")} label="Current total playtime" />
+              <Metric value={statistics.totalEvents.toLocaleString()} label="All-time Log records" />
+              <Metric value={statistics.baselineRecords.toLocaleString()} label="Baseline snapshots (not play sessions)" />
+              <Metric value={statistics.windowEvents.toLocaleString()} label="Activity events in range" />
+              <Metric value={statistics.playDays.toLocaleString()} label="Days with playtime recorded" />
+              <Metric value={statistics.activeDays.toLocaleString()} label="Days with any recorded activity" />
+            </Box>
           </Box>
 
-          <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1.35fr) minmax(0,.65fr)" }, gap: 2 }}>
-            <WeekdayCard statistics={statistics} />
-            <Breakdown title="Current status" rows={statistics.statuses} value="games" />
+          <Box component="section" aria-label="Monthly analytics">
+            <PeriodAnalysis title="Monthly data" rows={statistics.monthly} monthly={true} timeZone={statistics.timeZone} fromDate={statistics.fromDate} toDate={statistics.toDate} />
+          </Box>
+          <Box component="section" aria-label="Daily analytics">
+            <PeriodAnalysis title="Daily data" rows={statistics.daily} monthly={false} timeZone={statistics.timeZone} fromDate={statistics.fromDate} toDate={statistics.toDate} />
+          </Box>
+          <Box component="section" aria-label="Play timing analysis">
+            <WeekdayAnalysis statistics={statistics} />
+          </Box>
+          <Box component="section" aria-label="Genre analytics">
+            <BreakdownAnalysis title="Genres" description="Current playtime is all-time; event coverage and active days are limited to the selected window." rows={statistics.genres} measure="minutes" measureLabel="Current playtime" />
+          </Box>
+          <Box component="section" aria-label="Game analytics">
+            <GameAnalysis games={statistics.games} timeZone={statistics.timeZone} />
+          </Box>
+          <Box component="section" aria-label="Platform analytics">
+            <BreakdownAnalysis title="Platforms" description="Current library playtime is all-time; event counts and active days cover the selected window." rows={statistics.platforms} measure="minutes" measureLabel="Current playtime" />
+          </Box>
+          <Box component="section" aria-label="Source analytics">
+            <BreakdownAnalysis title="Sources" description="Current library playtime is all-time; event counts and active days cover the selected window." rows={statistics.sources} measure="minutes" measureLabel="Current playtime" />
+          </Box>
+          <Box component="section" aria-label="Status analytics">
+            <BreakdownAnalysis title="Statuses" description="Current game counts and playtime are all-time. Events shown are status transitions into the current status during the selected window." rows={statistics.statuses} measure="games" measureLabel="Current games" eventColumnLabel="Status transitions into this status" dayColumnLabel="Transition days" />
           </Box>
 
-          <Paper sx={{ p: { xs: 2, md: 3 } }}>
-            <Stack direction="row" sx={{ justifyContent: "space-between", mb: 2, gap: 2 }}>
-              <Box>
-                <Typography variant="h5">{period === "monthly" ? "Monthly details" : "Daily details"}</Typography>
-                <Typography variant="body2" color="text.secondary">Every recorded status, playtime and progress event is available here.</Typography>
-              </Box>
-              <Chip size="small" label={`${rows.length} ${period === "monthly" ? "months" : "days"}`} />
-            </Stack>
-            <Stack spacing={0.5} sx={{ maxHeight: 420, overflowY: "auto" }}>
-              {rows.map((row) => (
-                <Box key={row.period} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", sm: "minmax(130px,1fr) auto auto auto auto" }, gap: 1.5, alignItems: "center", p: 1.25, borderBottom: 1, borderColor: "divider" }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{periodLabel(row.period)}</Typography>
-                  <Typography variant="body2" color={row.minutesGained ? "primary.main" : "text.secondary"}>{formatMinutes(row.minutesGained)}</Typography>
-                  <Typography variant="body2" color={row.progressGained ? "secondary.main" : "text.secondary"}>{formatProgress(row.progressGained)}</Typography>
-                  <Typography variant="caption" color="text.secondary">{row.activeGames} games</Typography>
-                  <Typography variant="caption" color="text.secondary">{row.eventCount} events</Typography>
+          <Box component="section" aria-labelledby="log-title">
+            <Stack spacing={2}>
+              <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", alignItems: { sm: "end" }, gap: 1 }}>
+                <Box>
+                  <Typography id="log-title" variant="h5">Log</Typography>
+                  <Typography variant="body2" color="text.secondary">Every retained game event, including baseline snapshots, newest first. This section ignores the date window; expand a row for IDs, recording time, tags, genre and platform snapshots.</Typography>
                 </Box>
-              ))}
+                <Chip size="small" label={currentRange} />
+              </Stack>
+              {logError && <Alert severity="error">{logError}</Alert>}
+              {logLoading && <LinearProgress aria-label="Loading activity log" />}
+              {logPage && <ActivityLogTable items={logPage.items} timeZone={statistics.timeZone} />}
+              {!logPage && logLoading && <Paper sx={{ p: 3, textAlign: "center" }}><CircularProgress size={24} aria-label="Loading activity log" /></Paper>}
+              {!logPage && !logLoading && !logError && <Paper sx={{ p: 3 }}><Typography color="text.secondary">No log entries are available.</Typography></Paper>}
+              <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}>
+                <Typography variant="caption" color="text.secondary">Page {logCursors.length} · 50 events per page</Typography>
+                <Stack direction="row" spacing={1}>
+                  <Button variant="outlined" disabled={logCursors.length <= 1 || logLoading} onClick={onLogPrevious}>Previous</Button>
+                  <Button variant="outlined" disabled={!logPage?.nextCursor || logLoading} onClick={onLogNext}>Next</Button>
+                </Stack>
+              </Stack>
             </Stack>
-          </Paper>
+          </Box>
 
-          <RecentActivity statistics={statistics} />
+          <Box component="section" aria-labelledby="steam-data-title">
+            <Typography id="steam-data-title" variant="h5" sx={{ mb: 1 }}>Steam integration data</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Provider account and cached profile metrics are kept separate from the game activity Log.</Typography>
+            <SteamProfilePanel />
+          </Box>
         </Stack>
       )}
     </>
