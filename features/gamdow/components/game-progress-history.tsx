@@ -124,7 +124,7 @@ function ProgressChart({ days }: { days: DayActivity[] }) {
     : [...new Set([0, Math.floor((records.length - 1) / 2), records.length - 1])];
 
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, width: "100%", maxWidth: 480, alignSelf: "flex-start", overflow: "hidden" }}>
+    <Paper variant="outlined" sx={{ p: 1.5, width: "100%", maxWidth: 480, overflow: "hidden" }}>
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1, mb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Play &amp; progress</Typography>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
@@ -378,7 +378,7 @@ export function GameProgressHistory({
             lg: "minmax(0,480px) minmax(0,1fr)",
           },
           gap: 2,
-          alignItems: "start",
+          alignItems: "stretch",
         }}
       >
         <ProgressChart days={days} />
