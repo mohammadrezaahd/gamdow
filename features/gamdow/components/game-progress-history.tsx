@@ -370,8 +370,20 @@ export function GameProgressHistory({
   ) : (
     <Stack spacing={2}>
       <JourneySummary game={game} />
-      <ProgressChart days={days} />
-      <DayActivityList days={days} compact={false} />
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "minmax(0,1fr)",
+            lg: "minmax(0,480px) minmax(0,1fr)",
+          },
+          gap: 2,
+          alignItems: "start",
+        }}
+      >
+        <ProgressChart days={days} />
+        <DayActivityList days={days} compact={false} />
+      </Box>
     </Stack>
   );
 }
