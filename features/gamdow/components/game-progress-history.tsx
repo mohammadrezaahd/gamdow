@@ -210,7 +210,7 @@ function MiniProgressChart({ days, game }: { days: DayActivity[]; game: Game }) 
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 1.25, md: 1.5 } }}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1 }} mb={0.5}>
+      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", gap: 1, mb: 0.5 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle2">Progress trend</Typography>
           <Typography variant="caption" color="text.secondary">
